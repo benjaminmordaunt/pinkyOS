@@ -9,6 +9,16 @@
 #define INIT_KERN_SZ	0x200000
 #define INIT_KERNMAP 	(INIT_KERN_SZ + PHY_START)
 
+// VirtIO MMIO base
+// Each MMIO transport has size 0x200
+#define VIRT_MMIO_BASE      0x0a000000
+
+#define NUM_VIRTIO_TRANSPORTS 32
+
+// From a15irqmap
+#define VIRT_MMIO_IRQ_START 16 
+#define VIRT_MMIO_IRQ_END (VIRT_MMIO_IRQ_START + NUM_VIRTIO_TRANSPORTS - 1) /* inclusive */
+
 #ifndef __ASSEMBLER__
 
 static inline uint64 v2p(void *a) { return ((uint64) (a))  - (uint64)KERNBASE; }
