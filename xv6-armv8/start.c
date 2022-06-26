@@ -6,37 +6,37 @@
 #include "defs.h"
 #include "memlayout.h"
 
-void _uart_putc(int c)
-{
-    volatile uint8 * uart0 = (uint8*)UART0;
-    *uart0 = c;
-}
-
-
-void _puts (char *s)
-{
-    while (*s != '\0') {
-        _uart_putc(*s);
-        s++;
-    }
-}
-
-void _putint (char *prefix, uint val, char* suffix)
-{
-    char* arr = "0123456789ABCDEF";
-    int idx;
-
-    if (prefix) {
-        _puts(prefix);
-    }
-
-    for (idx = sizeof(val) * 8 - 4; idx >= 0; idx -= 4) {
-        _uart_putc(arr[(val >> idx) & 0x0F]);
-    }
-
-    if (suffix) {
-        _puts(suffix);
-    }
+void _uart_putc(int c)                                                                                                                                        
+{                                                                                                                                                             
+    volatile uint8 * uart0 = (uint8*)UART0;                                                                                                                   
+    *uart0 = c;                                                                                                                                               
+}                                                                                                                                                             
+                                                                                                                                                              
+                                                                                                                                                              
+void _puts (char *s)                                                                                                                                          
+{                                                                                                                                                             
+    while (*s != '\0') {                                                                                                                                      
+        _uart_putc(*s);                                                                                                                                       
+        s++;                                                                                                                                                  
+    }                                                                                                                                                         
+}                                                                                                                                                             
+                                                                                                                                                              
+void _putint (char *prefix, uint val, char* suffix)                                                                                                           
+{                                                                                                                                                             
+    char* arr = "0123456789ABCDEF";                                                                                                                           
+    int idx;                                                                                                                                                  
+                                                                                                                                                              
+    if (prefix) {                                                                                                                                             
+        _puts(prefix);                                                                                                                                        
+    }                                                                                                                                                         
+                                                                                                                                                              
+    for (idx = sizeof(val) * 8 - 4; idx >= 0; idx -= 4) {                                                                                                     
+        _uart_putc(arr[(val >> idx) & 0x0F]);                                                                                                                 
+    }                                                                                                                                                         
+                                                                                                                                                              
+    if (suffix) {                                                                                                                                             
+        _puts(suffix);                                                                                                                                        
+    }                                                                                                                                                         
 }
 
 void _do_exception(void)
@@ -110,7 +110,7 @@ void load_pgtlb (uint64* kern_pgtbl, uint64* user_pgtbl)
     if ((arch != 7) && (arch != 0xF)) {
         _puts ("Need AARM v6 or higher\n");
     }
-
+    
     //EL?
     asm("MRS %[r], CurrentEL":[r]"=r" (val32): :);
 
@@ -163,7 +163,21 @@ void load_pgtlb (uint64* kern_pgtbl, uint64* user_pgtbl)
 
     // set translation control register
     _puts("Setting Translation Control Register (TCR_EL1)\n");
-    val64 = (uint64)0x34B5203520;
+    val64 = (uint64)(
+        (32UL << TCR_EL1_T0SZ)
+        | (1UL << TCR_EL1_IRGN0)
+        | (1UL << TCR_EL1_ORGN0)
+        | (3UL << TCR_EL1_SH0)
+        | (32UL << TCR_EL1_T1SZ)
+        | (1UL << TCR_EL1_IRGN1)
+        | (1UL << TCR_EL1_ORGN1)
+        | (3UL << TCR_EL1_SH1)
+        | (2UL << TCR_EL1_TG1)
+        | (4UL << TCR_EL1_IPS)
+        | (1UL << TCR_EL1_AS)
+        | (1UL << TCR_EL1_TBI0)
+    );
+
     asm("MSR TCR_EL1, %[v]": :[v]"r" (val64):);
     asm("ISB": : :);
 

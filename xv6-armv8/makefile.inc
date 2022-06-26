@@ -1,6 +1,6 @@
 # Cross-compiling (e.g., on Mac OS X, install arm-none-eabi-gcc with MacPorts)
 #CROSSCOMPILE := aarch64-linux-gnu-
-CROSSCOMPILE := aarch64-none-elf-
+CROSSCOMPILE := aarch64-linux-gnu-
 # try linux eabi
 # CROSSCOMPILE := arm-linux-gnueabi-
 CC = $(CROSSCOMPILE)gcc
@@ -9,8 +9,8 @@ LD = $(CROSSCOMPILE)ld
 OBJCOPY = $(CROSSCOMPILE)objcopy
 OBJDUMP = $(CROSSCOMPILE)objdump
 
-CFLAGS = -march=armv8-a -mtune=cortex-a57 -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -Werror -I. -g 
-LDFLAGS = -L.
+CFLAGS = -march=armv8-a -mtune=cortex-a57 -fno-pic -static -fno-builtin -fno-strict-aliasing -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -I. -g 
+LDFLAGS = -L. -nostartfiles -nostdlib
 ASFLAGS = -march=armv8-a
 
 LIBGCC = $(shell $(CC) -print-libgcc-file-name)

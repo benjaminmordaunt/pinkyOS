@@ -16,7 +16,27 @@ struct cpu	*cpu;
 
 void kmain (void)
 {
-    cpu = &cpus[0];
+    uint64 mpidr;
+    int cpu_id;
+     
+    // If we're on a uniprocessor system, just use &cpus[0].
+    // Otherwise, generating a linear sequential CPU ID based on MPIDR_EL1.{Aff3..Aff0}
+    // is rather challenging. For now, make the (awful) assumption that we can just use Aff0
+    // for CPU indexing. This will have an awful effect if there is ever a collision.
+
+    asm("MRS %[r], MPIDR_EL1": [r]"=r" (mpidr): :);
+    if (mpidr & MPIDR_EL1_U)
+        cpu = &cpus[0];
+    else {
+        _puts("FIXME: Using only MPIDR_EL1.Aff0 for PE ID\n");
+        cpu_id = (mpidr >> MPIDR_EL1_AFF0) & 0xFF;
+        if (cpu_id > NCPU) {
+	    _puts("CPU id out of bounds\n");
+            while (1) ;            
+        }
+        _putint("[", cpu_id, "] kmain\n");
+        cpu = &cpus[cpu_id];
+    }
 
     uart_init (P2V(UART0));
 

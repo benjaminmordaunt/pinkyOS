@@ -5,7 +5,7 @@ clear
 
 qemu-system-aarch64 -machine virt -cpu cortex-a57 \
 -machine type=virt -m 128 -nographic \
--singlestep -kernel kernel.elf 
+-singlestep -kernel kernel.elf
 # skip: -singlestep
 # try skip -cpu, as str r0, [fp,#-8] not write onto mem
 # -cpu cortex-a15

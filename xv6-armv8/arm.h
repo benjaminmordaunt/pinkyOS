@@ -3,6 +3,48 @@
 
 #include "device/arm_virt.h"
 
+// TCR_EL1
+#define TCR_EL1_T0SZ   0
+#define TCR_EL1_RES0   6
+#define TCR_EL1_EPD0   7
+#define TCR_EL1_IRGN0  8
+#define TCR_EL1_ORGN0  10
+#define TCR_EL1_SH0    12
+#define TCR_EL1_TG0    14
+#define TCR_EL1_T1SZ   16
+#define TCR_EL1_A1     22
+#define TCR_EL1_EPD1   23
+#define TCR_EL1_IRGN1  24
+#define TCR_EL1_ORGN1  26
+#define TCR_EL1_SH1    28
+#define TCR_EL1_TG1    30
+#define TCR_EL1_IPS    32
+#define TCR_EL1_AS     36
+#define TCR_EL1_TBI0   37
+#define TCR_EL1_TBI1   38
+#define TCR_EL1_HA     39
+#define TCR_EL1_HD     40
+#define TCR_EL1_HPD0   41
+#define TCR_EL1_HPD1   42
+#define TCR_EL1_HWU059 43
+#define TCR_EL1_HWU060 44
+#define TCR_EL1_HWU061 45
+#define TCR_EL1_HWU062 46
+#define TCR_EL1_HWU159 47
+#define TCR_EL1_HWU160 48
+#define TCR_EL1_HWU161 49
+#define TCR_EL1_HWU162 50
+#define TCR_EL1_TBID0  51
+#define TCR_EL1_TBID1  52
+#define TCR_EL1_NFD0   53
+#define TCR_EL1_NFD1   54
+#define TCR_EL1_E0PD0  55
+#define TCR_EL1_E0PD1  56
+#define TCR_EL1_TCMA0  57
+#define TCR_EL1_TCMA1  58
+#define TCR_EL1_DS     59
+
+
 // trap frame: in ARM, there are seven modes. Among the 16 regular registers,
 // r13 (sp), r14(lr), r15(pc) are banked in all modes.
 // 1. In xv6_a, all kernel level activities (e.g., Syscall and IRQ) happens
@@ -61,5 +103,11 @@ struct trapframe {
 // cpsr/spsr bits
 #define NO_INT      0xc0
 #define DIS_INT     0x80
+
+// Multiprocessor affinity
+#define MPIDR_EL1_U    (1 << 30)
+#define MPIDR_EL1_AFF0 (1 << 0) 
+#define MPIDR_EL1_AFF1 (1 << 8)
+#define MPIDR_EL1_AFF2 (1 << 16)
 
 #endif

@@ -177,6 +177,9 @@ void            dump_trapframe (struct trapframe *tf);
 void            trap_reset(void);
 
 // uart.c
+void 		_uart_putc(int c);                
+void 		_puts (char *s);
+void 		_putint (char *prefix, uint val, char* suffix);
 void            uart_init(void*);
 void            uartputc(int);
 int             uartgetc(void);

@@ -40,7 +40,7 @@
 #define ENTRY_TABLE	0x02
 #define ENTRY_PAGE	0x02
 #define ENTRY_MASK	0x03
-#define ENTRY_FALUT	0x00
+#define ENTRY_FAULT	0x00
 
 #define MEM_ATTR_IDX_0	(0 << 2)
 #define MEM_ATTR_IDX_1	(1 << 2)
@@ -64,6 +64,8 @@
 #define SH_OUT_SH   (2 << 8)
 #define SH_IN_SH    (3 << 8)
 
+// Access flag not used by xv6, so always set to 1 to prevent
+// unnecessary page faults on first access.
 #define ACCESS_FLAG (1 << 10)
 
 #define PXN         (0x20000000000000)
