@@ -6,9 +6,9 @@
 #include "proc.h"
 
 // trap routine
-void swi_handler (struct trapframe *r, uint32 el, uint32 esr)
+void swi_handler (struct trapframe *r, uint32 el)
 {
-    //cprintf("\tswi_handler: %d\n", r->r0);
+    // cprintf("\tswi_handler: %d\n", r->r0);
     proc->tf = r;
     syscall ();
 }
@@ -36,7 +36,7 @@ void dabort_handler (struct trapframe *r, uint32 el, uint32 esr)
     asm("MRS %[r], FAR_EL1": [r]"=r" (fa)::);
     
     cprintf ("data abort: instruction 0x%x, fault addr 0x%x\n",
-             r->pc, fa);
+             r->elr, fa);
   
     dump_trapframe (r);
     //show_callstk("Stack dump for data exception.");
@@ -46,7 +46,7 @@ void dabort_handler (struct trapframe *r, uint32 el, uint32 esr)
 void iabort_handler (struct trapframe *r, uint32 el, uint32 esr)
 {
     cli();
-    cprintf ("prefetch abort at: 0x%x\n", r->pc);
+    cprintf ("prefetch abort at: 0x%x\n", r->elr);
 
     dump_trapframe (r);
 }
@@ -55,14 +55,14 @@ void iabort_handler (struct trapframe *r, uint32 el, uint32 esr)
 void reset_handler (struct trapframe *r, uint32 el, uint32 esr)
 {
     cli();
-    cprintf ("reset at: 0x%x \n", r->pc);
+    cprintf ("reset at: 0x%x \n", r->elr);
 }
 
 // trap routine
 void und_handler (struct trapframe *r, uint32 el, uint32 esr)
 {
     cli();
-    cprintf ("und at: 0x%x \n", r->pc);
+    cprintf ("und at: 0x%x \n", r->elr);
     dump_trapframe (r);
 }
 
@@ -70,14 +70,14 @@ void und_handler (struct trapframe *r, uint32 el, uint32 esr)
 void na_handler (struct trapframe *r, uint32 el, uint32 esr)
 {
     cli();
-    cprintf ("n/a at: 0x%x \n", r->pc);
+    cprintf ("n/a at: 0x%x \n", r->elr);
 }
 
 // trap routine
 void fiq_handler (struct trapframe *r, uint32 el, uint32 esr)
 {
     cli();
-    cprintf ("fiq at: 0x%x \n", r->pc);
+    cprintf ("fiq at: 0x%x \n", r->elr);
 }
 
 // trap routine
@@ -111,7 +111,7 @@ void trap_init ( )
 void dump_trapframe (struct trapframe *tf)
 {
     cprintf ("     sp: 0x%x\n", tf->sp);
-    cprintf ("     pc: 0x%x\n", tf->pc);
+    cprintf ("    elr: 0x%x\n", tf->elr);
     cprintf ("   spsr: 0x%x\n", tf->spsr);
     cprintf ("     r0: 0x%x\n", tf->r0);
     cprintf ("     r1: 0x%x\n", tf->r1);

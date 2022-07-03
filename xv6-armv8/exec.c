@@ -29,6 +29,7 @@ int exec (char *path, char **argv)
     }
 
     ilock(ip);
+    pgdir = 0;
 
     // Check ELF header
     if (readi(ip, (char*) &elf, 0, sizeof(elf)) < sizeof(elf)) {
@@ -38,8 +39,6 @@ int exec (char *path, char **argv)
     if (elf.magic != ELF_MAGIC) {
         goto bad;
     }
-
-    pgdir = 0;
 
     if ((pgdir = kpt_alloc()) == 0) {
         goto bad;
@@ -125,7 +124,7 @@ int exec (char *path, char **argv)
     oldpgdir = proc->pgdir;
     proc->pgdir = pgdir;
     proc->sz = sz;
-    proc->tf->pc = elf.entry;
+    proc->tf->elr = elf.entry;
     proc->tf->sp = sp;
 
     switchuvm(proc);

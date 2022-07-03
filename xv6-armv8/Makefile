@@ -3,9 +3,6 @@ QEMU = qemu-system-arm
 
 include makefile.inc
 
-# link the libgcc.a for __aeabi_idiv. ARM has no native support for div
-LIBS = $(LIBGCC)
-
 OBJS = \
 	lib/string.o \
 	\
@@ -65,12 +62,12 @@ build/initcode: $(addprefix build/,$(INITCODE_OBJ))
 	$(OBJDUMP) -S $< > initcode.asm
 
 build/fs.img:
-	make -C tools
-	make -C usr
+	$(MAKE) -C tools
+	$(MAKE) -C usr
 
 clean: 
 	rm -rf build
 	rm -f *.o *.d *.asm *.sym vectors.S bootblock entryother \
 	initcode initcode.out kernel xv6.img fs.img kernel.elf memfs
-	make -C tools clean
-	make -C usr clean
+	$(MAKE) -C tools clean
+	$(MAKE) -C usr clean

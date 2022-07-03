@@ -20,7 +20,7 @@ void sti (void)
 // return whether interrupt is currently enabled
 int int_enabled ()
 {
-    uint32 val;
+    uint64 val;
 
     asm("MRS %[v], DAIF": [v]"=r" (val)::);
 

@@ -39,16 +39,19 @@ void kmain (void)
     }
 
     uart_init (P2V(UART0));
+    _puts("kmain: uart_init complete\n");
 
     init_vmm ();
     kpt_freerange (align_up(&end, PT_SZ), P2V_WO(INIT_KERNMAP));
     paging_init (INIT_KERNMAP, PHYSTOP);
+    _puts("kmain: paging_init complete\n");
 
     kmem_init ();
     kmem_init2(P2V(INIT_KERNMAP), P2V(PHYSTOP));
+    _puts("kmain: kmem_init complete\n");
 
     trap_init ();				// vector table and stacks for models
-   
+     
     gic_init(P2V(VIC_BASE));			// arm v2 gic init
     uart_enable_rx ();				// interrupt for uart
     consoleinit ();				// console
@@ -65,5 +68,7 @@ void kmain (void)
 
     sti ();
     userinit();					// first user process
+    
+    _puts("kmain: entering scheduler\n");
     scheduler();				// start running processes
 }

@@ -155,7 +155,7 @@ static void gic_dist_init()
  */
 static void gic_cpu_init() 
 {
-	/* cprintf("gic cpuif type:0x%x\n", GICC_REG(GICC_IIDR)); no simulate in qemu */
+	cprintf("gic cpuif type:0x%x\n", GICC_REG(GICC_IIDR));
 	GICC_REG(GICC_PMR) = 0x0f; /* priority value 0 to 0xe is supported */
 }
 

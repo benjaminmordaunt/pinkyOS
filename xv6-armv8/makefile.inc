@@ -1,19 +1,16 @@
-# Cross-compiling (e.g., on Mac OS X, install arm-none-eabi-gcc with MacPorts)
-#CROSSCOMPILE := aarch64-linux-gnu-
-CROSSCOMPILE := aarch64-linux-gnu-
-# try linux eabi
-# CROSSCOMPILE := arm-linux-gnueabi-
-CC = $(CROSSCOMPILE)gcc
-AS = $(CROSSCOMPILE)as
-LD = $(CROSSCOMPILE)ld
-OBJCOPY = $(CROSSCOMPILE)objcopy
-OBJDUMP = $(CROSSCOMPILE)objdump
+TRIPLE := aarch64-none-elf
 
-CFLAGS = -march=armv8-a -mtune=cortex-a57 -fno-pic -static -fno-builtin -fno-strict-aliasing -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -I. -g 
-LDFLAGS = -L. -nostartfiles -nostdlib
-ASFLAGS = -march=armv8-a
+CC ?= clang 
+AS ?= llvm-as
+LD := ld.lld
+OBJCOPY ?= llvm-objcopy
+OBJDUMP ?= llvm-objdump
 
-LIBGCC = $(shell $(CC) -print-libgcc-file-name)
+CFLAGS = -march=armv8-a -mtune=cortex-a57 -fno-pic -static -fno-builtin -fno-strict-aliasing -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -I. -g -target $(TRIPLE)
+LDFLAGS ?= -L. --nostdlib
+ASFLAGS = -march=armv8-a -target $(TRIPLE)
+
+LIBGCC = $($(CC) -print-libgcc-file-name)
 
 # host compiler
 HOSTCC_preferred = gcc

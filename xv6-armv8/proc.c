@@ -140,7 +140,7 @@ void userinit(void)
 
     // set the user pc. The actual pc loaded into r15_usr is in
     // p->tf, the trapframe.
-    p->tf->pc = 0;					// beginning of initcode.S
+    p->tf->elr = 0;					// beginning of initcode.S
 
     safestrcpy(p->name, "initcode", sizeof(p->name));
     p->cwd = namei("/");
@@ -501,12 +501,12 @@ int kill(int pid)
 void procdump(void)
 {
     static char *states[] = {
-            [UNUSED]    "unused",
-            [EMBRYO]    "embryo",
-            [SLEEPING]  "sleep ",
-            [RUNNABLE]  "runble",
-            [RUNNING]   "run   ",
-            [ZOMBIE]    "zombie"
+            [UNUSED]    = "unused",
+            [EMBRYO]    = "embryo",
+            [SLEEPING]  = "sleep ",
+            [RUNNABLE]  = "runble",
+            [RUNNING]   = "run   ",
+            [ZOMBIE]    = "zombie"
     };
 
     struct proc *p;

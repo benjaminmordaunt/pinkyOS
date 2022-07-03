@@ -95,27 +95,26 @@ void set_bootpgtbl (uint64 virt, uint64 phy, uint len, int dev_mem )
 void load_pgtlb (uint64* kern_pgtbl, uint64* user_pgtbl)
 {
     char	arch;
-    uint32	val32;
     uint64	val64;
 
     // read the main id register to make sure we are running on ARMv6
-    asm("MRS %[r], MIDR_EL1":[r]"=r" (val32): :);
+    asm("MRS %[r], MIDR_EL1":[r]"=r" (val64): :);
 
-    if (val32 >> 24 == 0x41) {
+    if (val64 >> 24 == 0x41) {
         _puts ("Implementer: ARM Limited\n");
     }
 
-    arch = (val32 >> 16) & 0x0F;
+    arch = (val64 >> 16) & 0x0F;
 
     if ((arch != 7) && (arch != 0xF)) {
         _puts ("Need AARM v6 or higher\n");
     }
     
     //EL?
-    asm("MRS %[r], CurrentEL":[r]"=r" (val32): :);
+    asm("MRS %[r], CurrentEL":[r]"=r" (val64): :);
 
-    val32 = (val32 & 0x0C) >> 2;
-    switch(val32) {
+    val64 = (val64 & 0x0C) >> 2;
+    switch(val64) {
         case 0:
             _puts("Current EL: EL0\n");
             break;
@@ -143,8 +142,8 @@ void load_pgtlb (uint64* kern_pgtbl, uint64* user_pgtbl)
     asm("DSB SY" : : :);
 
     // no trapping on FP/SIMD instructions
-    val32 = 0x03 << 20;
-    asm("MSR CPACR_EL1, %[v]": :[v]"r" (val32):);
+    val64 = 0x03 << 20;
+    asm("MSR CPACR_EL1, %[v]": :[v]"r" (val64):);
 
     // monitor debug: all disabled
     asm("MSR MDSCR_EL1, xzr":::);
@@ -194,9 +193,9 @@ void load_pgtlb (uint64* kern_pgtbl, uint64* user_pgtbl)
 
     // set system control register
     _puts("Setting System Control Register (SCTLR_EL1)\n");
-    asm("MRS %[r], SCTLR_EL1":[r]"=r" (val32): :); //0x0000000000c50838
-    val32 = val32 | 0x01;
-    asm("MSR SCTLR_EL1, %[v]": :[v]"r" (val32):);
+    asm("MRS %[r], SCTLR_EL1":[r]"=r" (val64): :); //0x0000000000c50838
+    val64 = val64 | 0x01;
+    asm("MSR SCTLR_EL1, %[v]": :[v]"r" (val64):);
     asm("ISB": : :);
 
     _puts("System Configure Completed...\n\n");
