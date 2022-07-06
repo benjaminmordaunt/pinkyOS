@@ -54,8 +54,8 @@ static void printint (uint64 xx, int base, int sign)
 void cprintf (char *fmt, ...)
 {
     int i, c, locking;
-    uint64 *argp;
     char *s;
+    va_list argp;
 
     locking = cons.locking;
 
@@ -67,7 +67,7 @@ void cprintf (char *fmt, ...)
         panic("null fmt");
     }
 
-    argp = (uint64*) (void*) (&fmt + 22);
+    va_start(argp, fmt);
 
     for (i = 0; (c = fmt[i] & 0xff) != 0; i++) {
         if (c != '%') {
@@ -83,16 +83,16 @@ void cprintf (char *fmt, ...)
 
         switch (c) {
         case 'd':
-            printint(*argp++, 10, 1);
+            printint(va_arg(argp, uint), 10, 1);
             break;
 
         case 'x':
         case 'p':
-            printint(*argp++, 16, 0);
+            printint(va_arg(argp, uint64), 16, 0);
             break;
 
         case 's':
-            if ((s = (char*) *argp++) == 0) {
+            if ((s = va_arg(argp, char*)) == 0) {
                 s = "(null)";
             }
 
@@ -116,6 +116,8 @@ void cprintf (char *fmt, ...)
     if (locking) {
         release(&cons.lock);
     }
+
+    va_end(argp);
 }
 
 void panic (char *s)

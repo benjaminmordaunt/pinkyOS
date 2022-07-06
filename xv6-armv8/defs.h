@@ -27,6 +27,12 @@ typedef uint64  pgd_t;
 extern  uint64  _kernel_pgtbl;
 typedef void (*ISR) (struct trapframe *tf, int n);
 
+// Proper variadic function call support that conforms to AAPCS64.
+typedef __builtin_va_list va_list;
+#define va_start(ap, last_named_arg) __builtin_va_start(ap, last_named_arg)
+#define va_end(ap)                   __builtin_va_end(ap)
+#define va_arg(ap, type)             __builtin_va_arg(ap, type)
+
 // arm.c
 void            set_stk(uint mode, uint addr);
 void            cli (void);
@@ -203,5 +209,8 @@ void            paging_init (uint64 phy_low, uint64 phy_hi);
 
 // gic.c
 void 		gic_init(void* base);
+
+// klib.c
+int 		strcmp(const char *p, const char *q);
 
 #endif
