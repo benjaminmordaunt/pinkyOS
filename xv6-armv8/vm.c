@@ -9,7 +9,8 @@
 #include "elf.h"
 
 extern char data[];  // defined by kernel.ld
-pgd_t *kpgdir;  // for use in scheduler()
+pgd_t *kpgdir;       // for use in scheduler()
+uint64 llvaddr;      // used by debug
 
 // Xv6 can only allocate memory in 4KB blocks. This is fine
 // for x86. ARM's page table and page directory (for 28-bit
@@ -227,6 +228,8 @@ int loaduvm (pgd_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
         if (readi(ip, p2v(pa), offset + i, n) != n) {
             return -1;
         }
+
+	llvaddr = (uint64) p2v(pa);
     }
 
     return 0;

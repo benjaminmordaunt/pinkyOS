@@ -21,7 +21,7 @@ struct elfhdr {
     ushort	shstrndx;
 };
 
-// Program section header
+// Program header
 struct proghdr {
     uint	type;
     uint	flags;
@@ -31,6 +31,20 @@ struct proghdr {
     uint64	filesz;
     uint64	memsz;
     uint64	align;
+};
+
+// Section header
+struct secthdr {
+    uint	name;
+    uint	type;
+    uint64	flags;
+    uint64	addr;
+    uint64	off;
+    uint64	sz;
+    uint	link;
+    uint	info;
+    uint64	addralign;
+    uint64	entsz;
 };
 
 // Values for Proghdr type

@@ -7,6 +7,8 @@
 #include "elf.h"
 #include "arm.h"
 
+extern uint64 llvaddr;
+
 // load a user program for execution
 int exec (char *path, char **argv)
 {
@@ -46,7 +48,7 @@ int exec (char *path, char **argv)
 
     // Load program into memory.
     sz = 0;
-
+    
     for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
         if (readi(ip, (char*) &ph, off, sizeof(ph)) != sizeof(ph)) {
             goto bad;
@@ -68,6 +70,56 @@ int exec (char *path, char **argv)
             goto bad;
         }
     }
+
+#ifdef CONFIG_DEBUG
+    struct secthdr sh;
+    uint strndx;
+    uint shmax = elf.shnum + 1;
+    char chreadblk[256], chridx = 0;
+    char *chwp = &chreadblk[0];
+
+    // Check where .text was loaded so that we know where to point
+    // our debugger for a given image. If this check fails for whatever
+    // reason, just continue.
+
+    for (i = 0, off = elf.shoff; i < elf.shnum; i++, off += sizeof(sh)) {
+        if (readi(ip, (char*) &sh, off, sizeof(sh)) != sizeof(sh)) {
+	       continue;
+	}
+        
+	if (i == elf.shstrndx) {
+            strndx = 0;
+
+	    // TODO: Implement efficient single-byte reads for strings. 
+	    while (shmax--) {
+                while (readi(ip, chwp, sh.off+(chridx++), 1) == 1) {
+		        if (*chwp++ == '\0' || (chwp - &chreadblk[0] >= sizeof(chreadblk))) break;
+		}
+
+	    	if (!strcmp(chreadblk, ".text")) {
+		    break;
+	    	}
+
+	        strndx++;
+		chwp = &chreadblk[0];
+	    }
+
+	    shmax = elf.shnum + 1;
+	}
+    }
+
+    for (i = 0, off = elf.shoff; i < elf.shnum; i++, off += sizeof(sh)) {
+	if (readi(ip, (char*) &sh, off, sizeof(sh)) != sizeof(sh)) {
+		continue;
+	}
+
+	if (sh.name == strndx) {
+	       cprintf("exec: loaded %s @ 0x%p [|.text| %db]\n", path, llvaddr, sh.sz);
+	       break;
+	}
+    }
+
+#endif /* CONFIG_DEBUG */
 
     iunlockput(ip);
     ip = 0;
