@@ -41,10 +41,11 @@ printf(int fd, char *fmt, ...)
 {
     char *s;
     int c, i, state;
-    uint64 *ap;
+    va_list argp;
     
     state = 0;
-    ap = (uint64*)(void*)&fmt + 22;
+    va_start(argp, fmt);
+
     for(i = 0; fmt[i]; i++){
         c = fmt[i] & 0xff;
         if(state == 0){
@@ -55,14 +56,11 @@ printf(int fd, char *fmt, ...)
             }
         } else if(state == '%'){
             if(c == 'd'){
-                printint(fd, *ap, 10, 1);
-                ap++;
+                printint(fd, va_arg(argp, uint64), 10, 1);
             } else if(c == 'x' || c == 'p'){
-                printint(fd, *ap, 16, 0);
-                ap++;
+                printint(fd, va_arg(argp, uint64), 16, 0);
             } else if(c == 's'){
-                s = (char*)*ap;
-                ap++;
+                s = va_arg(argp, char*);
                 if(s == 0)
                     s = "(null)";
                 while(*s != 0){
@@ -70,8 +68,8 @@ printf(int fd, char *fmt, ...)
                     s++;
                 }
             } else if(c == 'c'){
-                putc(fd, *ap);
-                ap++;
+		// char is promotable to int, so need to use (at least) int here.
+                putc(fd, va_arg(argp, int));
             } else if(c == '%'){
                 putc(fd, c);
             } else {
@@ -82,4 +80,6 @@ printf(int fd, char *fmt, ...)
             state = 0;
         }
     }
+
+    va_end(argp);
 }
