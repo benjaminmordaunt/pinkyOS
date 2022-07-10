@@ -1,0 +1,3 @@
+[submodule "xv6-armv8/dtc"]
+	path = xv6-armv8/dtc
+	url = git://git.kernel.org/pub/scm/utils/dtc/dtc.git

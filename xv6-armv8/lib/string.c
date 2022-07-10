@@ -35,6 +35,15 @@ void* memset(void *dst, int v, int n)
     return dst;
 }
 
+void *memchr(const void *ptr, int value, uint num) {
+	uchar *pout = (uchar*) ptr;
+
+	while (num--) {
+		if (*pout++ == (uchar) value) break;
+	}
+
+	return (void*) (pout - 1);
+}
 
 int memcmp(const void *v1, const void *v2, uint n)
 {
@@ -132,6 +141,16 @@ char* safestrcpy(char *s, const char *t, int n)
     return os;
 }
 
+int strnlen(const char *s, uint maxlen) {
+	int n;
+
+	for (n = 0; n < maxlen && s[n]; n++)
+		;
+
+	return n;
+
+}
+
 int strlen(const char *s)
 {
     int n;
@@ -142,3 +161,49 @@ int strlen(const char *s)
     return n;
 }
 
+char *strrchr(const char *str, int character) {
+	const char *lchar = &str[strlen(str)];
+
+	for (; *lchar != (uchar) character; lchar--)
+		;
+
+	return (char*) lchar;
+}
+
+char *strchr(const char *str, int character) {
+	const char *p = str;
+
+	for (; *p != (uchar) character; p++)
+		;
+
+	return (char*) p;
+}
+
+// String conversion functions
+unsigned long int strtoul(const char *str, char **endptr, int base) {
+	unsigned long res;
+	char *p = (char*) str;
+
+	while (*p) {
+		unsigned int c = *p++;
+		unsigned int lc = c | 0x20;
+		unsigned int val;
+
+		if ('0' <= c && c <= '9')
+			val = c - '0';
+		else if ('a' <= lc && lc <= 'f')
+			val = lc - 'a' + 10;
+		else
+			break;
+
+		if (val >= base)
+			break;
+
+		res = res * base + val;
+	}
+
+	if (endptr)
+		*endptr = p;
+
+	return res;
+}

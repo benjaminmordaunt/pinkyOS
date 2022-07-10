@@ -13,6 +13,7 @@ OBJS = \
 	exec.o\
 	file.o\
 	fs.o\
+	klib.o\
 	log.o\
 	main.o\
 	memide.o\
@@ -35,7 +36,7 @@ OBJS = \
 #device/picirq.o \
 	
 KERN_OBJS = $(OBJS) entry.o
-kernel.elf: $(addprefix build/,$(KERN_OBJS)) kernel.ld build/initcode build/fs.img
+kernel.elf: $(addprefix build/,$(KERN_OBJS)) kernel.ld build/initcode build/fs.img build/libfdt.a
 	cp -f build/initcode initcode
 	cp -f build/fs.img fs.img
 	$(call LINK_BIN, kernel.ld, kernel.elf, \
@@ -60,6 +61,17 @@ build/initcode: $(addprefix build/,$(INITCODE_OBJ))
 	$(call LINK_INIT, -N -e start -Ttext 0)
 	$(call OBJCOPY_INIT)
 	$(OBJDUMP) -S $< > initcode.asm
+
+#libfdt
+dtc/Makefile:
+	cd dtc && meson build
+
+build/libfdt.a: dtc/Makefile
+	@echo "Cleaning external project - libfdt"
+	cd dtc && $(MAKE) clean
+
+	@echo "Making external project - libfdt"
+	cd dtc && $(call build-libfdt) && cp libfdt/libfdt.a build/
 
 build/fs.img:
 	$(MAKE) -C tools

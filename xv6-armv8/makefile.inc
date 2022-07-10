@@ -1,13 +1,15 @@
 TRIPLE := aarch64-none-elf
 
-CC ?= clang 
-AS ?= llvm-as
+CC := clang 
+AS := llvm-as
 LD := ld.lld
-OBJCOPY ?= llvm-objcopy
-OBJDUMP ?= llvm-objdump
+OBJCOPY := llvm-objcopy
+OBJDUMP := llvm-objdump
+DEBUG ?= "-DCONFIG_DEBUG"
+FDT_INCLUDE := dtc/libfdt
 
-CFLAGS = -march=armv8-a -mtune=cortex-a57 -fno-pic -static -fno-builtin -fno-strict-aliasing -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -I. -g -target $(TRIPLE)
-LDFLAGS ?= -L. --nostdlib
+CFLAGS = -march=armv8-a -mtune=cortex-a57 -fno-pic -static -fno-builtin -fno-strict-aliasing -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -I. -Iinclude -I$(FDT_INCLUDE) -g -target $(TRIPLE) $(DEBUG)
+LDFLAGS ?= -L. -nostdlib
 ASFLAGS = -march=armv8-a -target $(TRIPLE)
 
 LIBGCC = $($(CC) -print-libgcc-file-name)
@@ -43,3 +45,5 @@ AS_WITH = $(call quiet-command,$(CC) $(ASFLAGS) \
 build/%.o: %.S
 	$(call build-directory)
 	$(call AS_WITH, )
+
+build-libfdt = $(MAKE) CC=$(CC) AS=$(AS) LD=$(LD) CFLAGS="$(CFLAGS) -I../include" LDFLAGS="$(LDFLAGS)" libfdt
