@@ -63,13 +63,7 @@ build/initcode: $(addprefix build/,$(INITCODE_OBJ))
 	$(OBJDUMP) -S $< > initcode.asm
 
 #libfdt
-dtc/Makefile:
-	cd dtc && meson build
-
 build/libfdt.a: dtc/Makefile
-	@echo "Cleaning external project - libfdt"
-	cd dtc && $(MAKE) clean
-
 	@echo "Making external project - libfdt"
 	cd dtc && $(call build-libfdt) && cp libfdt/libfdt.a build/
 
