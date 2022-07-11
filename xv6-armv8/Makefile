@@ -65,7 +65,7 @@ build/initcode: $(addprefix build/,$(INITCODE_OBJ))
 #libfdt
 build/libfdt.a: dtc/Makefile
 	@echo "Making external project - libfdt"
-	cd dtc && $(call build-libfdt) && cp libfdt/libfdt.a build/
+	cd dtc && $(call build-libfdt) && cp libfdt/libfdt.a ../build/
 
 build/fs.img:
 	$(MAKE) -C tools
