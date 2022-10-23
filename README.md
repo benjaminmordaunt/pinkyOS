@@ -25,3 +25,5 @@ Copyright (c) 2022+ Benjamin Mordaunt
 As can be seen when looking at the Linux kernel project, the requirement to *not break userspace* (and others) has led to a slew of incremental hacks on fundamental systems such as memory management. In turn, this greatly increases the maintenance burden for contributors, makes navigating the codebase more problematic and deters new contributors who _just can't understand_ the design decisions - and for good reason.
 
 In contrast, PinkyOS uses "_finite backwards-compatibility_" to enable applications built for older versions of the kernel to function under a compatiblity layer, up to 3 API-breaking versions hence. For applications even older than this, they can continue to run under _multiple_ (stacked) compatibility layers. The older an application is, the more it will be "punished" in terms of performance and capabilities, but at least they will run.
+
+In this sense, pinkyOS places feature-richness and high performance well above legacy compatibility - a feature that will likely dissuade most industry users, but which likely shouldn't.
