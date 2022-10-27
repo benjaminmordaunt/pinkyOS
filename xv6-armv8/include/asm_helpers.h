@@ -43,3 +43,6 @@
 	.set .L__sym_size_##name, .-name ;     \
 	.size name, .L__sym_size_##name
 
+/* Macro indirection for a register shift */
+#define FIELD_ALIGN(val, shift)                \
+	((val) << (shift))
