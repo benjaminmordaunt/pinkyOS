@@ -5,38 +5,34 @@ include makefile.inc
 
 OBJS = \
 	lib/string.o \
-	\
-	arm.o\
-	bio.o\
-	buddy.o\
-	console.o\
-	exec.o\
-	file.o\
-	fs.o\
-	klib.o\
-	log.o\
-	main.o\
-	memide.o\
-	pipe.o\
-	proc.o\
-	spinlock.o\
-	start.o\
-	swtch.o\
-	syscall.o\
-	sysfile.o\
-	sysproc.o\
-	trap.o\
-	trap_asm.o\
+	arm.o \
+	bio.o \
+	buddy.o \
+	console.o \
+	exec.o \
+	file.o \
+	fs.o \
+	log.o \
+	main.o \
+	memide.o \
+	pipe.o \
+	proc.o \
+	spinlock.o \
+	start.o \
+	swtch.o \
+	syscall.o \
+	sysfile.o \
+	sysproc.o \
+	trap.o \
+	trap_asm.o \
 	vm.o \
-	\
 	device/timer.o \
 	device/uart.o \
-	device/gic.o
-
-#device/picirq.o \
+	device/gic.o \
+	kernel/kmem.o
 	
 KERN_OBJS = $(OBJS) entry.o
-kernel.elf: $(addprefix build/,$(KERN_OBJS)) kernel.ld build/initcode build/fs.img build/libfdt.a
+kernel.elf: $(addprefix build/,$(KERN_OBJS)) kernel.ld build/initcode build/fs.img
 	cp -f build/initcode initcode
 	cp -f build/fs.img fs.img
 	$(call LINK_BIN, kernel.ld, kernel.elf, \
@@ -49,7 +45,7 @@ kernel.elf: $(addprefix build/,$(KERN_OBJS)) kernel.ld build/initcode build/fs.i
 qemu: kernel.elf
 	@clear
 	@echo "Press Ctrl-A and then X to terminate QEMU session\n"
-	$(QEMU) -M versatilepb -m 128 -cpu arm1176  -nographic -kernel kernel.elf
+	$(QEMU) -M versatilepb -m 128 -cpu arm1176 -nographic -kernel kernel.elf
 
 INITCODE_OBJ = initcode.o
 $(addprefix build/,$(INITCODE_OBJ)): initcode.S
@@ -63,9 +59,9 @@ build/initcode: $(addprefix build/,$(INITCODE_OBJ))
 	$(OBJDUMP) -S $< > initcode.asm
 
 #libfdt
-build/libfdt.a: dtc/Makefile
-	@echo "Making external project - libfdt"
-	cd dtc && $(call build-libfdt) && cp libfdt/libfdt.a ../build/
+#build/libfdt.a: dtc/Makefile
+#	@echo "Making external project - libfdt"
+#	cd dtc && $(call build-libfdt) && cp libfdt/libfdt.a ../build/
 
 build/fs.img:
 	$(MAKE) -C tools

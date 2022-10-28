@@ -8,7 +8,23 @@ OBJDUMP := llvm-objdump
 DEBUG ?= "-DCONFIG_DEBUG"
 FDT_INCLUDE := dtc/libfdt
 
-CFLAGS = -march=armv8-a -mtune=cortex-a57 -fno-pic -static -fno-builtin -fno-strict-aliasing -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -Wall -Werror -I. -Iinclude -I$(FDT_INCLUDE) -g -target $(TRIPLE) $(DEBUG)
+CFLAGS = -march=armv8-a -mtune=cortex-a57 -fno-pic -static -fno-builtin \
+         -fno-strict-aliasing -fno-stack-protector -fno-unwind-tables \
+	 -fno-asynchronous-unwind-tables -Wall -Werror -I. -Iinclude \
+	 -I$(FDT_INCLUDE) -Ikernel/include -g -target $(TRIPLE) $(DEBUG)
+
+# Don't allow old-school trigraphs
+CFLAGS += -Wno-trigraphs
+
+# Place uninitialized globals in bss
+CFLAGS += -fno-common
+
+# Enforce "Linux-style" C, with no declaration and statement intermingling
+CFLAGS += -Wdeclaration-after-statement
+
+# Variable-length arrays are bad
+CFLAGS += -Wvla
+
 LDFLAGS ?= -L. -nostdlib
 ASFLAGS = -march=armv8-a -target $(TRIPLE)
 
@@ -32,7 +48,7 @@ LINK_INIT = $(call quiet-command,$(LD) $(LDFLAGS) \
 OBJCOPY_INIT = $(call quiet-command,$(OBJCOPY) \
 	-S -O binary --prefix-symbols="_binary_$@" $@.out $@, "  OBJCOPY  $(TARGET_DIR)$@")
 
-build-directory = $(shell mkdir -p build build/device build/lib)
+build-directory = $(shell mkdir -p build build/device build/lib build/kernel)
 
 build/%.o: %.c
 	$(call build-directory)

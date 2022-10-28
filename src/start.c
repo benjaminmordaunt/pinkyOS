@@ -148,8 +148,6 @@ void load_pgtlb (uint64* kern_pgtbl, uint64* user_pgtbl)
     // monitor debug: all disabled
     asm("MSR MDSCR_EL1, xzr":::);
 
-    // set memory attribute indirection register
-    _puts("Setting Memory Attribute Indirection Register (MAIR_EL1)\n");
     val64 = (uint64)0xFF440C0400;
     asm("MSR MAIR_EL1, %[v]": :[v]"r" (val64):);
     asm("ISB": : :);

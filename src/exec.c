@@ -26,6 +26,14 @@ int exec (char *path, char **argv)
     uint64 sp;
     uint64 ustack[3 + MAXARG + 1];
 
+#ifdef CONFIG_DEBUG
+    struct secthdr sh;
+    uint strndx;
+    uint shmax = elf.shnum + 1;
+    char chreadblk[256], chridx = 0;
+    char *chwp = &chreadblk[0];
+#endif
+
     if ((ip = namei(path)) == 0) {
         return -1;
     }
@@ -72,12 +80,6 @@ int exec (char *path, char **argv)
     }
 
 #ifdef CONFIG_DEBUG
-    struct secthdr sh;
-    uint strndx;
-    uint shmax = elf.shnum + 1;
-    char chreadblk[256], chridx = 0;
-    char *chwp = &chreadblk[0];
-
     // Check where .text was loaded so that we know where to point
     // our debugger for a given image. If this check fails for whatever
     // reason, just continue.
