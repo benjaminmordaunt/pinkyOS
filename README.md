@@ -1,5 +1,6 @@
 # PinkyOS
 A hobby kernel and OS based (loosely) on the xv6 research kernel.
+
 Exclusively supports armv8.x-a with a focus on real-time requirements and novel Arm architectural features. For example, there will be first-class support for transactional memory operations and, later, Confidential Compute Architecture (CCA, incl. "Realms").
 
 ## Running under QEMU
