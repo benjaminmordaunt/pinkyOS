@@ -161,10 +161,14 @@ static int mappages (pgd_t *pgdir, void *va, uint size, uint pa, uint64 ap)
     return 0;
 }
 
-// flush all TLB
-static void flush_tlb (void)
+// This function invalidates all translation entries at EL1 for this VMID
+// (VMID currently unused under pinkyOS). Note that once your maintenance is complete,
+// such as setting up MAIR, TCR, TTBR, you will need to use the synchronisation sequence
+// `dsb ish; isb` (provided by commit_tlb()) to ensure all writes are drained to memory, 
+// register writes are committed, and all PEs have the correct view of TLB.
+static void invalidate_tlb_el1(void)
 {
-    asm("TLBI VMALLE1" : : :);
+    asm("tlbi vmalle1" : : :);
 }
 
 // Switch to the user page table (TTBR0)
@@ -181,7 +185,7 @@ void switchuvm (struct proc *p)
     val64 = (uint64) V2P(p->pgdir) | 0x00;
 
     asm("MSR TTBR0_EL1, %[v]": :[v]"r" (val64):);
-    flush_tlb();
+    invalidate_tlb_el1();
 
     popcli();
 }
@@ -462,5 +466,5 @@ int copyout (pgd_t *pgdir, uint va, void *p, uint len)
 void paging_init (uint64 phy_low, uint64 phy_hi)
 {
     mappages (P2V(&_kernel_pgtbl), P2V(phy_low), phy_hi - phy_low, phy_low, AP_RW_1_0);
-    flush_tlb ();
+    invalidate_tlb_el1();
 }
