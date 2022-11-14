@@ -23,6 +23,7 @@
 
 typedef unsigned long long int va_t;
 typedef unsigned long long int pgtbl_desc_t;
+typedef unsigned long long int pgtbl_attrs_t;
 
 unsigned int PT_LEVEL_ADDR_SHIFT[5];
 unsigned int PT_LEVEL_PTRS[5];
@@ -45,7 +46,19 @@ va_t         PT_LEVEL_MASK[5];
     #define _PT_PAGE_ADDR_MASK                                   _PT_TABLE_ADDR_MASK
 #endif /* PAGE_SIZE_4K */
 
+#define PAGE_SIZE                                                      (1 << _PT_PS)
+
+/* Memory alignment */
+#define ALIGN_DOWN(addr, align) \
+            (addr & ~((1 << align) - 1))
+
+#define ALIGN_UP(addr, align) \
+            (ALIGN_DOWN(addr, align) + (1 << align))
+
 void init_pgtbl_constants(void);
 inline unsigned int pgtbl_level_idx(va_t va, int lvl);
+
+int pgtbl_walk(pgtbl_desc_t *base, va_t va, pgtbl_desc_t **entry_out, int alloc);
+int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, pgtbl_attrs_t attrs);
 
 #endif /* H_PAGE */

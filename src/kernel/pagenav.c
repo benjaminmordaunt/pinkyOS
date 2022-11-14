@@ -35,16 +35,16 @@ inline unsigned int pgtbl_level_idx(va_t va, int lvl) {
     return ((va & PT_LEVEL_MASK[lvl]) >> PT_LEVEL_ADDR_SHIFT[lvl]);
 }
 
+/* Walk the page table at `base`. Do not apply attributes to the entry, aside from
+   those necessary for navigation. Use pgtbl_map_pages to actually perform a "proper"
+   mapping. */
 int pgtbl_walk(pgtbl_desc_t *base, va_t va, pgtbl_desc_t **entry_out, int alloc) {
     pgtbl_desc_t *next_desc = base;
     pgtbl_desc_t *alloc_target;
     int i = 0;
-    unsigned int addr_shift, ptrs;
     unsigned long long int mask;
 
-    while ((addr_shift = PT_LEVEL_ADDR_SHIFT[i++]) && 
-           (ptrs = PT_LEVEL_PTRS[i++]) &&
-           (mask = PT_LEVEL_MASK[i++]))
+    while ((mask = PT_LEVEL_MASK[i++]))
     {
         /* Move to the correct descriptor */
         next_desc = next_desc[pgtbl_level_idx(va, i)];
@@ -64,7 +64,7 @@ int pgtbl_walk(pgtbl_desc_t *base, va_t va, pgtbl_desc_t **entry_out, int alloc)
             if ((alloc_target = page_alloc()) < 0)
                 return -1;
 
-            memset(alloc_target, 0, 1 << _PT_PS);
+            memset(alloc_target, 0, PAGE_SIZE);
 
             /* Note that ENTRY_TABLE is being set for tables and page descriptors alike - they present the same in memory. */
             *next_desc = kern_v2p(alloc_target) | ENTRY_VALID | ENTRY_TABLE;
@@ -73,10 +73,40 @@ int pgtbl_walk(pgtbl_desc_t *base, va_t va, pgtbl_desc_t **entry_out, int alloc)
 
         } else {
             /* Extract the next level from the entry - the entries are physical addresses */
-            next_desc = kern_p2v(next_desc & mask);
+            next_desc = kern_p2v(*next_desc & mask);
         }
     }
 
     *entry_out = next_desc;
+    return 0;
+}
+
+/* Maps a physically contiguous block of memory from `phys_start`, over a length of end - start
+   (end is exclusive). All addresses should be page-aligned. */
+int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, pgtbl_attrs_t attrs) {
+    va_t vpage_base = start;
+    pa_t ppage_base = phys_start;
+    pgtbl_desc_t *pgtbl_entry;
+
+#ifdef PINKY_DEBUG
+    if ((start != ALIGN_DOWN(start))
+     || (end != ALIGN_DOWN(end))
+     || (phys_start != ALIGN_DOWN(phys_start)))
+        return -1;
+#endif /* PINKY_DEBUG */
+
+    while (vpage_base + PAGE_SIZE < end) {
+        if (pgtbl_walk(base, vpage_base, &pgtbl_entry, 1) < 0)
+            return -1;
+
+        if (*pgtbl_entry & ENTRY_VALID)
+            return -1;
+
+        *pgtbl_entry = ppage_base | attrs | ENTRY_VALID | ENTRY_TABLE;
+
+        vpage_base += PAGE_SIZE;
+        ppage_base += PAGE_SIZE;
+    }
+
     return 0;
 }
