@@ -48,6 +48,10 @@ va_t         PT_LEVEL_MASK[5];
 
 #define PAGE_SIZE                                                      (1 << _PT_PS)
 
+/* Page table descriptor formats */
+
+PT_DESC_STAGE1_LOWER_MEMATTR_SHIFT                                                 2
+
 /* Memory alignment */
 #define ALIGN_DOWN(addr, align) \
             (addr & ~((1 << align) - 1))

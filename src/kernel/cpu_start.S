@@ -16,20 +16,19 @@
 #include "asm_helpers.h"
 #include "sysreg.h"
 
-#define MAIR_INIT                                  \
-	(AA64_MAIR_ATTR_IDX(0, AA64_MEM_DEVICE_nGnRnE) | \
-	 AA64_MAIR_ATTR_IDX(1, AA64_MEM_DEVICE_nGnRE)  | \
-	 AA64_MAIR_ATTR_IDX(2, AA64_MEM_DEVICE_GRE)    | \
-	 AA64_MAIR_ATTR_IDX(3, AA64_MEM_NORMAL_NC)     | \
-	 AA64_MAIR_ATTR_IDX(4, AA64_MEM_NORMAL_WBNT))
+#define MAIR_INIT                                                       \
+	(AA64_MAIR_ATTR_IDX(MEMATTR_DEVICE, AA64_MEM_DEVICE_nGnRnE)         | \
+	 AA64_MAIR_ATTR_IDX(MEMATTR_DEVICE_RELAXED, AA64_MEM_DEVICE_nGnRE)  | \
+	 AA64_MAIR_ATTR_IDX(MEMATTR_NORMAL_UNCACHEABLE, AA64_MEM_NORMAL_NC) | \
+	 AA64_MAIR_ATTR_IDX(MEMATTR_NORMAL_WRITEBACK, AA64_MEM_NORMAL_WBNT))
 
 /* set up a sensible translation scheme for now */
-#define TCR_INIT                                   \
-	(FIELD_ALIGN(32, AA64_TCR_T0SZ_SHIFT)                   | \
+#define TCR_INIT                                          \
+	(FIELD_ALIGN(32, AA64_TCR_T0SZ_SHIFT)                 | \
 	FIELD_ALIGN(1, AA64_TCR_ORGN0_SHIFT)                  | \
 	FIELD_ALIGN(1, AA64_TCR_IRGN0_SHIFT)                  | \
 	FIELD_ALIGN(3, AA64_TCR_SH0_SHIFT)                    | \
-	FIELD_ALIGN(32, AA64_TCR_T1SZ_SHIFT)                   | \
+	FIELD_ALIGN(32, AA64_TCR_T1SZ_SHIFT)                  | \
 	FIELD_ALIGN(1, AA64_TCR_ORGN1_SHIFT)                  | \
 	FIELD_ALIGN(1, AA64_TCR_IRGN1_SHIFT)                  | \
 	FIELD_ALIGN(3, AA64_TCR_SH1_SHIFT)                    | \

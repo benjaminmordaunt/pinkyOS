@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 
+#include "sysreg.h"
 #include "page.h"
 
 void init_pgtbl_constants(void) {
@@ -83,17 +84,20 @@ int pgtbl_walk(pgtbl_desc_t *base, va_t va, pgtbl_desc_t **entry_out, int alloc)
 
 /* Maps a physically contiguous block of memory from `phys_start`, over a length of end - start
    (end is exclusive). All addresses should be page-aligned. */
-int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, pgtbl_attrs_t attrs) {
+int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, pgtbl_attrs_t attrs, int mode) {
     va_t vpage_base = start;
     pa_t ppage_base = phys_start;
     pgtbl_desc_t *pgtbl_entry;
+    unsigned long long int mode_attr;
 
-#ifdef PINKY_DEBUG
-    if ((start != ALIGN_DOWN(start))
-     || (end != ALIGN_DOWN(end))
-     || (phys_start != ALIGN_DOWN(phys_start)))
-        return -1;
-#endif /* PINKY_DEBUG */
+    KASSERT(mode >= 0 && mode < MEMATTR_MAX_IDX, 
+        ("pgtbl_map_pages: memory mode %d out of range", mode));
+    KASSERT(start == ALIGN_DOWN(start, _PT_PS),
+        ("pgtbl_map_pages: start va not page aligned: 0x%llx", start));
+    KASSERT(end == ALIGN_DOWN(end, _PT_PS),
+        ("pgtbl_map_pages: end va not page aligned: 0x%llx", end));
+    KASSERT(phys_start == ALIGN_DOWN(phys_start, _PT_PS),
+        ("pgtbl_map_pages: phys_start pa not page aligned: 0x%llx", phys_start));
 
     while (vpage_base + PAGE_SIZE < end) {
         if (pgtbl_walk(base, vpage_base, &pgtbl_entry, 1) < 0)
@@ -102,7 +106,10 @@ int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, p
         if (*pgtbl_entry & ENTRY_VALID)
             return -1;
 
-        *pgtbl_entry = ppage_base | attrs | ENTRY_VALID | ENTRY_TABLE;
+        mode_attr = (mode & 7) << PT_DESC_STAGE1_LOWER_MEMATTR_SHIFT;
+
+        /* XXX: Should mask attrs application to ensure it doesn't write over address bits. */
+        *pgtbl_entry = ppage_base | attrs | ENTRY_VALID | ENTRY_TABLE | mode_attr;
 
         vpage_base += PAGE_SIZE;
         ppage_base += PAGE_SIZE;
