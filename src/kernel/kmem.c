@@ -83,7 +83,7 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
     /* Need to know nbitmaps to find how large the bookkeeping journal needs to be,
        but the more we eat into the heap, the (potentially) fewer bitmaps we need.
        Just overprovision and avoid the nasty math for now. */
-    nbitmaps = 1 << MAX(ffs(physmem_sz) - 3, 0);
+    nbitmaps = 1 << MAX(ffs(physmem_sz - 1) - _PT_PS - 3, 0);
     if (physmem_sz < nbitmaps * sizeof(uint32_t))
         panic("pm_physmap_init: insufficient address space for buddy bookkeeping");
 
@@ -95,7 +95,7 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
     
     /* Still cannot update physmem_sz as there cannot be disparity between maxord
        and the size of the bitmap for the bitmap offset calc routines. */
-    pmap->maxord = MAX(ffs(physmem_sz) + 1 - _PT_PS, 0);
+    pmap->maxord = MAX(ffs(physmem_sz - 1) + 1 - _PT_PS, 0);
     for (i = 0; i < maxord; i++) {
         pmap->orders[i].bitmap = pmap->journal_start + PM_BUDDY_BM_OFFSET(i, maxord);
     }
