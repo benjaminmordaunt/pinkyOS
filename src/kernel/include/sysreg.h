@@ -95,7 +95,7 @@
 #define MEMATTR_DEVICE_RELAXED_IDX     1
 #define MEMATTR_NORMAL_UNCACHEABLE_IDX 2
 #define MEMATTR_NORMAL_WRITEBACK_IDX   3
-#define MEMATTR_MAX_IDX                4
+#define MEMATTR_MAX_IDX                3
 
 #define MEMATTR_DEVICE                 AA64_MEM_DEVICE_nGnRnE
 #define MEMATTR_DEVICE_RELAXED         AA64_MEM_DEVICE_nGnRE

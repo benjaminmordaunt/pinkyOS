@@ -22,6 +22,7 @@
 #define ENTRY_TABLE                                     (1 << 1)
 
 typedef unsigned long long int va_t;
+typedef unsigned long long int pa_t;
 typedef unsigned long long int pgtbl_desc_t;
 typedef unsigned long long int pgtbl_attrs_t;
 

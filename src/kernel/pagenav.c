@@ -45,7 +45,7 @@ int pgtbl_walk(pgtbl_desc_t *base, va_t va, pgtbl_desc_t **entry_out, int alloc)
     int i = 0;
     unsigned long long int mask;
 
-    while ((mask = PT_LEVEL_MASK[i++]))
+    for (; (mask = PT_LEVEL_MASK[i]); i++)
     {
         /* Move to the correct descriptor */
         next_desc = next_desc[pgtbl_level_idx(va, i)];
@@ -90,7 +90,7 @@ int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, p
     pgtbl_desc_t *pgtbl_entry;
     unsigned long long int mode_attr;
 
-    KASSERT(mode >= 0 && mode < MEMATTR_MAX_IDX, 
+    KASSERT(mode >= 0 && mode <= MEMATTR_MAX_IDX, 
         ("pgtbl_map_pages: memory mode %d out of range", mode));
     KASSERT(start == ALIGN_DOWN(start, _PT_PS),
         ("pgtbl_map_pages: start va not page aligned: 0x%llx", start));
