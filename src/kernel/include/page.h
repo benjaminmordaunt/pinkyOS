@@ -30,7 +30,7 @@ unsigned int PT_LEVEL_ADDR_SHIFT[5];
 unsigned int PT_LEVEL_PTRS[5];
 va_t         PT_LEVEL_MASK[5];
 
-#ifdef PAGE_SIZE_4K
+// #ifdef PAGE_SIZE_4K
     #define _PT_N_MAX     3
     #define _PT_PS       12
 
@@ -45,20 +45,20 @@ va_t         PT_LEVEL_MASK[5];
     #define _PT_PAGE_ADDR_SHIFT                                 _PT_TABLE_ADDR_SHIFT
     #define _PT_PAGE_ADDR_SIZE                                   _PT_TABLE_ADDR_SIZE
     #define _PT_PAGE_ADDR_MASK                                   _PT_TABLE_ADDR_MASK
-#endif /* PAGE_SIZE_4K */
+// #endif /* PAGE_SIZE_4K */
 
 #define PAGE_SIZE                                                      (1 << _PT_PS)
 
 /* Page table descriptor formats */
 
-PT_DESC_STAGE1_LOWER_MEMATTR_SHIFT                                                 2
+#define PT_DESC_STAGE1_LOWER_MEMATTR_SHIFT                                         2
 
 /* Memory alignment */
 #define ALIGN_DOWN(addr, align) \
-            (addr & ~((1 << align) - 1))
+            ((addr) & ~((1 << (align)) - 1))
 
 #define ALIGN_UP(addr, align) \
-            (ALIGN_DOWN(addr, align) + (1 << align))
+            (((addr) & ~((1 << (align)) - 1)) + (1 << (align)))
 
 void init_pgtbl_constants(void);
 inline unsigned int pgtbl_level_idx(va_t va, int lvl);
