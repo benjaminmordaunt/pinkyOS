@@ -109,6 +109,11 @@ int _pm_block_split(struct pm_physmap *pmap, int block_offset, int order) {
         panic("_pm_block_split: parent block was invalid");
     }
 
+    /* Explicitly invalidate the block. Even though it is no longer in a list,
+       it may still be explicitly referred to by offset. */
+    parent->next = 0;
+    parent->prev = 0;
+
     return 0;
 }
 
