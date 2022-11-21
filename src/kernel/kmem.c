@@ -50,7 +50,8 @@ struct pm_extent {
 struct pm_physmap {
     list_head_t           *pgdat_start;
     void                  *heap_start;
-    list_head_t           *orders[PM_BUDDY_MAX_ORDER]; /* ptrs into pgdat region */
+    list_head_t           *lin_orders[PM_BUDDY_MAX_ORDER + 1];
+    list_head_t           *orders[PM_BUDDY_MAX_ORDER + 1]; /* ptrs into pgdat region */
     int                   maxord;
     int                   poff;     /* A global page offset for all resolutions from orders */
 } pm_physmap_up;
@@ -174,7 +175,7 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
     struct pm_extent *keepout = keepout_head;
     struct pm_physmap *pmap = &pm_physmap_up;
     list_head_t *ord;
-    int ordidx, maxord, i, rc, pgdat_entries;
+    int ordidx, maxord, i, j, rc, pgdat_entries;
 
     if (physmem_ext->start != ALIGN_DOWN(physmem_ext->start, _PT_PS)
     || (physmem_ext->end   != ALIGN_DOWN(physmem_ext->end,   _PT_PS))) {
@@ -229,7 +230,32 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
         pm_physmap_mark_region(pmap, keepout->start, keepout->end);
     }
 
+    /* Populate the linear order mapping */
+    for (i = 0, j = 0; i < maxord; i++) {
+        pmap->lin_orders[i] = &pmap->pgdat_start[j];
+        j += (1 << (maxord - i));
+    }
+
     return rc;
+}
+
+/* Generic kernel memory allocation routine */
+void *kmalloc(int order) {
+    list_head_t *block;
+    void *block_ptr;
+    pa_t block_off;
+
+    block = pm_physmap_up.orders[order];
+    block_off = (1 << (block - &pm_physmap_up.lin_orders[order]));
+
+    /* Fast path */
+    if (list_entry_valid(block)) {
+        block_ptr = pm_physmap_up.heap_start + block_off;
+        return block_ptr;
+    }
+
+    // XXX: Some function to split an arbitrary block of order (order + 1)
+    return block_ptr;
 }
 
 // ----- TO BE MOVED BEGIN -----
