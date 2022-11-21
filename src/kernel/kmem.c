@@ -27,9 +27,7 @@
         of up to a single 4GiB contiguous space.
 */
 
-#define PM_BUDDY_MAX_ORDER                             10       
-#define PM_BUDDY_BM_OFFSET(order, maxord)               \
-            ((uint32_t)(1 << (MAX(maxord - order, 0))))
+#define PM_BUDDY_MAX_ORDER                             10
 
 /* Represents a contiguous span of physical memory. Exclusive of end. */
 struct pm_extent {
@@ -55,7 +53,6 @@ struct pm_physmap {
     list_head_t           *orders[PM_BUDDY_MAX_ORDER]; /* ptrs into pgdat region */
     int                   maxord;
     int                   poff;     /* A global page offset for all resolutions from orders */
-
 } pm_physmap_up;
 
 #define pm_order_offset(ord, maxord) \
