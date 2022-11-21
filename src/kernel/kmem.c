@@ -251,11 +251,11 @@ void *kmalloc(int order) {
     /* Fast path */
     if (list_entry_valid(block)) {
         block_ptr = pm_physmap_up.heap_start + block_off;
-        return block_ptr;
+        return block_ptr + (pm_physmap_up.poff << _PT_PS);
     }
 
     // XXX: Some function to split an arbitrary block of order (order + 1)
-    return block_ptr;
+    return block_ptr + (pm_physmap_up.poff << _PT_PS);
 }
 
 // ----- TO BE MOVED BEGIN -----
