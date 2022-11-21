@@ -132,8 +132,11 @@ int pm_physmap_assert_split(struct pm_physmap *pmap, void *addr, int order) {
         block = &pmap->pgdat_start[pm_order_offset(iord, pmap->maxord) + block_offset];
 
         if (list_entry_valid(block)) {
-            if (iord > order)
+            if (iord > order) {
                 _pm_block_split(pmap, block_offset, iord);
+                iord -= 2;
+                continue;
+            }
             return 1;
         }
     }
