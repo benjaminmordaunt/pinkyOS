@@ -50,7 +50,6 @@ struct pm_extent {
    present in the buddy system. */
 
 struct pm_physmap {
-    char                  *flatmap_start;
     list_head_t           *pgdat_start;
     void                  *heap_start;
     list_head_t           *orders[PM_BUDDY_MAX_ORDER]; /* ptrs into pgdat region */
@@ -113,12 +112,6 @@ int _pm_block_split(struct pm_physmap *pmap, int block_offset, int order) {
         panic("_pm_block_split: parent block was invalid");
     }
 
-    for (pagemapent = &pmap->flatmap_start[block_offset << order]; 
-        pagemapent < &pmap->flatmap_start[(block_offset + 1) << order]; 
-        pagemapent++) {
-        *pagemapent--;
-    }
-
     return 0;
 }
 
@@ -128,19 +121,22 @@ int pm_physmap_assert_split(struct pm_physmap *pmap, void *addr, int order) {
     int block_offset, iord;
     list_head_t *block;
     pa_t tgt_block_base;
-    char *page_uplink = pmap->flatmap_start + ((pa_t)(addr) >> _PT_PS);
 
     /* If the block already exists at a finer granularity, do nothing. */    
     /* Find the higher order block and request splits */
-    while ((iord = *page_uplink) > order) {
+    for (iord = 0; iord <= pmap->maxord; iord++) {
         tgt_block_base = ALIGN_DOWN((pa_t)(addr), _PT_PS + iord);
         block_offset = pm_block_offset(pmap, tgt_block_base, iord);
         block = &pmap->pgdat_start[pm_order_offset(iord, pmap->maxord) + block_offset];
 
-        _pm_block_split(pmap, block_offset, iord);
+        if (list_entry_valid(block)) {
+            if (iord > order)
+                _pm_block_split(pmap, block_offset, iord);
+            return 1;
+        }
     }
 
-    return 1;
+    return 0;
 }
 
 int pm_physmap_mark_region(struct pm_physmap *pmap, void *start, void *end) {
@@ -167,41 +163,6 @@ int pm_physmap_mark_region(struct pm_physmap *pmap, void *start, void *end) {
     pm_physmap_assert_split(pmap, start_align_goal, start_min_ord);
 }
 
-int _pm_physmap_init(struct pm_physmap *pmap, pa_t size, int order, struct pm_extent *keepout_head) {
-    struct pm_extent *keepout = keepout_head;
-    pa_t ordsz = (1 << (_PT_PS + order));
-    list_head_t *ord;
-    int ordidx;
-
-    for (ord = pmap->pgdat_start, ordidx = 0; ordidx < order; ordidx++) {
-        list_head_init(ord);
-        pmap->orders[ordidx] = ord;
-        ord += (1 << (order - ordidx));
-    }
-
-    /* pm_physmap_init already guaranteed size will be a PAGE_SIZE multiple */
-    pm_physmap_mark_region(pmap, pmap->heap_start + size, pmap->heap_start + ordsz);
-
-    for (; keepout; keepout = keepout->lentry.next) {
-        if (keepout->start >= keepout->end)
-            panic("pm_physmap_init: malformed or zero-size keepout entry");
-
-        /* XXX: Check whether hole is over pgdat area - panic for now */
-        if ((keepout->start >= pmap->pgdat_start && keepout->start < pmap->pgdat_start + (pmap->heap_start - pmap->pgdat_start))
-         || (keepout->end > pmap->pgdat_start && keepout->end <= pmap->pgdat_start + (pmap->heap_start - pmap->pgdat_start)))
-            panic("pm_physmap_init: keepout entry will cause buddy bookkeeping corruption");
-
-        /* Check whether hole is completely irrelevant */
-        if ((keepout->start < pmap->pgdat_start && keepout->end <= pmap->pgdat_start)
-         || (keepout->start >= pmap->heap_start + ordsz))
-            continue;
-
-        pm_physmap_mark_region(pmap, keepout->start, keepout->end);
-    }
-
-    return 0;
-}
-
 int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_head) {
     pa_t physmem_sz = physmem_ext->end - physmem_ext->start;
     pa_t ordsz;
@@ -209,7 +170,6 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
     struct pm_physmap *pmap = &pm_physmap_up;
     list_head_t *ord;
     int ordidx, maxord, i, rc, pgdat_entries;
-    char *page_uplink;
 
     if (physmem_ext->start != ALIGN_DOWN(physmem_ext->start, _PT_PS)
     || (physmem_ext->end   != ALIGN_DOWN(physmem_ext->end,   _PT_PS))) {
@@ -223,16 +183,8 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
     ordsz = (1 << (_PT_PS + maxord));
 
     pgdat_entries = (1 << (maxord + 1));
-    pmap->flatmap_start = (void *)physmem_ext->start;
 
-    /* Initialize the page-level lookup map. Entries contain the order number for the block 
-       responsible for this page. Used for relating arbitrary addresses to their controlling block. 
-       Initially, all pages will point to the overarching block at maxord */
-    for (i = 0, page_uplink = (char*)pmap->flatmap_start; i < pgdat_entries; page_uplink++) {
-        *page_uplink = maxord;
-    }
-
-    pmap->pgdat_start = (void*)page_uplink;
+    pmap->pgdat_start = (void*)physmem_ext->start;
     pmap->heap_start = ALIGN_UP((pa_t)pmap->pgdat_start + pgdat_entries * sizeof(list_head_t), _PT_PS);
     
     /* How many order-0 pages are we off from being order-maxord aligned? 
@@ -258,8 +210,10 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
             panic("pm_physmap_init: malformed or zero-size keepout entry");
 
         /* XXX: Check whether hole is over pgdat area - panic for now */
-        if ((keepout->start >= pmap->pgdat_start && keepout->start < pmap->pgdat_start + (pmap->heap_start - pmap->pgdat_start))
-         || (keepout->end > pmap->pgdat_start && keepout->end <= pmap->pgdat_start + (pmap->heap_start - pmap->pgdat_start)))
+        if ((keepout->start >= pmap->pgdat_start && keepout->start < pmap->pgdat_start + 
+                ((pa_t)pmap->heap_start - (pa_t)pmap->pgdat_start))
+         || (keepout->end > pmap->pgdat_start && keepout->end <= pmap->pgdat_start + 
+                ((pa_t)pmap->heap_start - (pa_t)pmap->pgdat_start)))
             panic("pm_physmap_init: keepout entry will cause buddy bookkeeping corruption");
 
         /* Check whether hole is completely irrelevant */
