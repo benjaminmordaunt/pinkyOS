@@ -66,4 +66,30 @@ inline unsigned int pgtbl_level_idx(va_t va, int lvl);
 int pgtbl_walk(pgtbl_desc_t *base, va_t va, pgtbl_desc_t **entry_out, int alloc);
 int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, pgtbl_attrs_t attrs);
 
+/* Converts an absolute page-aligned address to the address space used by the VM system.
+   This allows for buddy-allocator management of non-max-order aligned page offsets.
+   Presumes the physical map (vm_physmap_t *) is at `pmap` */
+#define ABS_TO_VM(addr) \
+            ((uintptr_t)addr - (pmap->poff << _PT_PS))
+
+#define VM_TO_ABS(addr) \
+            ((uintptr_t)addr + (pmap->poff << _PT_PS))
+
+/* Page (and block) flags */
+#define VM_PAGE_AVAILABLE                       (1 << 0)  /* Pages which are available for mapping into VA space. */
+#define VM_PAGE_KEEPOUT                         (1 << 1)  /* Pages which are marked by keepout extents at init time,
+                                                             never try to reclaim or really do anything with these pages! */
+
+#define VM_ORDER_BLOCK(order, index) \
+            (pmap->pgdat_start + ((index) << (order))
+
+#define VM_ORDER_BLOCK_OFFSET(order, count) \
+            ((count) << (order))
+
+#define VM_ORDER_BLOCK_COUNT(order, block) \
+            (((block) - pmap->pgdat_start) >> (order))
+
+#define VM_HEAP_FROM_PGDAT(block) \
+            ((void *)(pmap->heap_start + (VM_ORDER_BLOCK_COUNT(0, block) << _PT_PS)))
+
 #endif /* H_PAGE */

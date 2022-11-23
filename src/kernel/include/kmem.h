@@ -28,3 +28,5 @@ typedef struct list_head_struct {
                 
 
 int kstrcmp(const char *p, const char *q);
+
+#define __packed __attribute__((packed))

@@ -27,12 +27,12 @@
         of up to a single 4GiB contiguous space.
 */
 
-#define PM_BUDDY_MAX_ORDER                             10
+#define VM_MAX_ORDER                             10
 
 /* Represents a contiguous span of physical memory. Exclusive of end. */
 struct pm_extent {
-    pa_t start;
-    pa_t end;
+    uintptr_t start;
+    uintptr_t end;
     list_head_t lentry;
 };
 
@@ -47,11 +47,16 @@ struct pm_extent {
    pm_buddy_block structure if at least one (two with its buddy) is
    present in the buddy system. */
 
+struct vm_page_struct {
+    list_head_t fle;     /* freelist entry */
+    uint8_t     order;   /* order of this block */
+    uint8_t     flags;   /* page flags as applied by the vm system - see vm_page.h */
+} __packed;
+
 struct pm_physmap {
-    list_head_t           *pgdat_start;
+    struct vm_page_struct *pgdat_start;
     void                  *heap_start;
-    list_head_t           *lin_orders[PM_BUDDY_MAX_ORDER + 1];
-    list_head_t           *orders[PM_BUDDY_MAX_ORDER + 1]; /* ptrs into pgdat region */
+    struct vm_page_struct *orders[VM_MAX_ORDER + 1]; /* ptrs into pgdat region */
     int                   maxord;
     int                   poff;     /* A global page offset for all resolutions from orders */
 } pm_physmap_up;
@@ -59,8 +64,8 @@ struct pm_physmap {
 #define pm_order_offset(ord, maxord) \
             (1 << ((maxord - ord)))
 
-int pm_block_offset(struct pm_physmap *pmap, pa_t addr, int ord) {
-    pa_t raddr = addr - (pa_t)pmap->heap_start - (1 << (pmap->poff + _PT_PS));
+int pm_block_offset(struct pm_physmap *pmap, uintptr_t addr, int ord) {
+    uintptr_t raddr = addr - (uintptr_t)pmap->heap_start - (1 << (pmap->poff + _PT_PS));
     int idx;
 
     /* If the block cannot be expressed at this granularity, return -1 */
@@ -123,12 +128,12 @@ int _pm_block_split(struct pm_physmap *pmap, int block_offset, int order) {
 int pm_physmap_assert_split(struct pm_physmap *pmap, void *addr, int order) {
     int block_offset, iord;
     list_head_t *block;
-    pa_t tgt_block_base;
+    uintptr_t tgt_block_base;
 
     /* If the block already exists at a finer granularity, do nothing. */    
     /* Find the higher order block and request splits */
     for (iord = 0; iord <= pmap->maxord; iord++) {
-        tgt_block_base = ALIGN_DOWN((pa_t)(addr), _PT_PS + iord);
+        tgt_block_base = ALIGN_DOWN((uintptr_t)(addr), _PT_PS + iord);
         block_offset = pm_block_offset(pmap, tgt_block_base, iord);
         block = &pmap->pgdat_start[pm_order_offset(iord, pmap->maxord) + block_offset];
 
@@ -147,12 +152,12 @@ int pm_physmap_assert_split(struct pm_physmap *pmap, void *addr, int order) {
 
 int pm_physmap_mark_region(struct pm_physmap *pmap, void *start, void *end) {
     int start_min_ord, end_min_ord;
-    pa_t start_align_goal;
+    uintptr_t start_align_goal;
     int iord;
 
     /* Ensure we have sufficient granularity of control over ALIGN_DOWN(start, _PT_PS) */
     start_min_ord = 0;
-    start_align_goal = ALIGN_DOWN((pa_t)start, _PT_PS);
+    start_align_goal = ALIGN_DOWN((uintptr_t)start, _PT_PS);
 
     /* Aritmetic coming up which operates on pgdat, so need to offset */
     start_align_goal -= (pmap->poff << _PT_PS);
@@ -161,7 +166,7 @@ int pm_physmap_mark_region(struct pm_physmap *pmap, void *start, void *end) {
         /* Get the highest order that also aligns with this page to
            minimise splitting. */
 
-        if (start_align_goal == ALIGN_DOWN((pa_t)start, _PT_PS + iord)) {
+        if (start_align_goal == ALIGN_DOWN((uintptr_t)start, _PT_PS + iord)) {
             start_min_ord = iord;
             break;
         }
@@ -170,8 +175,8 @@ int pm_physmap_mark_region(struct pm_physmap *pmap, void *start, void *end) {
 }
 
 int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_head) {
-    pa_t physmem_sz = physmem_ext->end - physmem_ext->start;
-    pa_t ordsz;
+    uintptr_t physmem_sz = physmem_ext->end - physmem_ext->start;
+    uintptr_t ordsz;
     struct pm_extent *keepout = keepout_head;
     struct pm_physmap *pmap = &pm_physmap_up;
     list_head_t *ord;
@@ -187,15 +192,14 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
 
     maxord = ffs(physmem_sz) + 1 - _PT_PS;
     ordsz = (1 << (_PT_PS + maxord));
-
-    pgdat_entries = (1 << (maxord + 1));
+    pgdat_entries = (1 << (maxord));
 
     pmap->pgdat_start = (void*)physmem_ext->start;
-    pmap->heap_start = ALIGN_UP((pa_t)pmap->pgdat_start + pgdat_entries * sizeof(list_head_t), _PT_PS);
+    pmap->heap_start = ALIGN_UP((uintptr_t)pmap->pgdat_start + pgdat_entries * sizeof(struct vm_page_struct), _PT_PS);
     
     /* How many order-0 pages are we off from being order-maxord aligned? 
        This will affect all block offset calculations in pm_physmap. */
-    pmap->poff = ((pa_t)pmap->heap_start - ALIGN_DOWN((pa_t)pmap->heap_start, maxord)) >> _PT_PS;
+    pmap->poff = ((uintptr_t)pmap->heap_start - ALIGN_DOWN((uintptr_t)pmap->heap_start, maxord)) >> _PT_PS;
 
     for (ord = pmap->pgdat_start, ordidx = 0; ordidx < maxord; ordidx++) {
         list_head_init_invalid(ord);
@@ -206,7 +210,7 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
     pmap->orders[ordidx] = ord;
 
     /* Revise available size after bookkeeping */
-    physmem_sz = physmem_ext->end - (pa_t)pmap->heap_start;
+    physmem_sz = physmem_ext->end - (uintptr_t)pmap->heap_start;
 
     /* Already guaranteed size will be a PAGE_SIZE multiple */
     pm_physmap_mark_region(pmap, pmap->heap_start + physmem_sz, pmap->heap_start + ordsz);
@@ -217,9 +221,9 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
 
         /* XXX: Check whether hole is over pgdat area - panic for now */
         if ((keepout->start >= pmap->pgdat_start && keepout->start < pmap->pgdat_start + 
-                ((pa_t)pmap->heap_start - (pa_t)pmap->pgdat_start))
+                ((uintptr_t)pmap->heap_start - (uintptr_t)pmap->pgdat_start))
          || (keepout->end > pmap->pgdat_start && keepout->end <= pmap->pgdat_start + 
-                ((pa_t)pmap->heap_start - (pa_t)pmap->pgdat_start)))
+                ((uintptr_t)pmap->heap_start - (uintptr_t)pmap->pgdat_start)))
             panic("pm_physmap_init: keepout entry will cause buddy bookkeeping corruption");
 
         /* Check whether hole is completely irrelevant */
@@ -230,32 +234,42 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
         pm_physmap_mark_region(pmap, keepout->start, keepout->end);
     }
 
-    /* Populate the linear order mapping */
-    for (i = 0, j = 0; i < maxord; i++) {
-        pmap->lin_orders[i] = &pmap->pgdat_start[j];
-        j += (1 << (maxord - i));
+    return rc;
+}
+
+/* The part of the kmalloc routine which can be reentered to get
+   larger block sizes. i.e. it deals with pgdat space (struct vm_page_struct *) 
+   instead of heap space (void *). */
+struct vm_page_struct *_kmalloc(int order) {
+    struct vm_page_struct *block;
+    struct pm_physmap *pmap = &pm_physmap_up;
+
+    /* This can occur in two ways. Either the kmalloc caller requested an invalid
+       order, or recursion has led us to this termination condition. */
+    if (order > pmap->maxord)
+        panic("kmalloc: order exceeds maximum for this map");
+
+    block = pmap->orders[order];
+    if (!block) {
+        /* Freelist empty - get a larger page and _kfree the buddy 
+           back onto this freelist */
+        block = _kmalloc(order + 1);
+
+        /* The _kfree operation doesn't just liberate the unused buddy,
+           it actually _performs_ the split from (order + 1) to order. */
+        _kfree(block + VM_ORDER_BLOCK_OFFSET(order, 1));
     }
 
-    return rc;
+    return block;
 }
 
 /* Generic kernel memory allocation routine */
 void *kmalloc(int order) {
-    list_head_t *block;
-    void *block_ptr;
-    pa_t block_off;
+    struct vm_page_struct *block;
+    struct pm_physmap *pmap = &pm_physmap_up;
 
-    block = pm_physmap_up.orders[order];
-    block_off = (1 << (block - &pm_physmap_up.lin_orders[order]));
-
-    /* Fast path */
-    if (list_entry_valid(block)) {
-        block_ptr = pm_physmap_up.heap_start + block_off;
-        return block_ptr + (pm_physmap_up.poff << _PT_PS);
-    }
-
-    // XXX: Some function to split an arbitrary block of order (order + 1)
-    return block_ptr + (pm_physmap_up.poff << _PT_PS);
+    block = _kmalloc(order);
+    return VM_HEAP_FROM_PGDAT(block);
 }
 
 // ----- TO BE MOVED BEGIN -----
