@@ -90,6 +90,16 @@ int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, p
             (((block) - pmap->pgdat_start) >> (order))
 
 #define VM_HEAP_FROM_PGDAT(block) \
-            ((void *)(pmap->heap_start + (VM_ORDER_BLOCK_COUNT(0, block) << _PT_PS)))
+            ((void *)(pmap->heap_start + (VM_ORDER_BLOCK_COUNT(0, (block)) << _PT_PS)))
+
+#define VM_PGDAT_FROM_HEAP(addr) \
+            (pmap->pgdat_start + (((char *)(addr) - (char *)pmap->heap_start) >> _PT_PS))
+            
+/* Converts an absolute address to one in the max-order-space. */
+#define VM_ADDR_TO_MOS(addr) \
+            ((char *)(addr) - (1 << _PT_PS) * pmap->poff)
+
+#define VM_GET_BUDDY_TYPE(block) \
+            (((block) - pmap->pgdat_start) % 2)
 
 #endif /* H_PAGE */

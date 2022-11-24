@@ -20,12 +20,21 @@ typedef struct list_head_struct {
 #define list_entry_valid(l) \
             (((list_head_t *)l)->next && ((list_head_t *)l)->prev)
 
-#define LIST_TAIL(l, ptr) \
+#define list_tail(l, ptr) \
             do { \
                 for ((ptr) = (l); (ptr)->next != LIST_TAIL_TERM; (ptr) = (ptr)->next) \
                     {} \
             } while (0)
-                
+
+#define list_remove(l) \
+            do { \
+                if (((list_head_t *)l)->next != LIST_TAIL_TERM) \
+                    ((list_head_t *)l)->next->prev = ((list_head_t *)l)->prev; \
+                if (((list_head_t *)l)->prev != LIST_HEAD_TERM) \
+                    ((list_head_t *)l)->prev->next = ((list_head_t *)l)->next; \
+                ((list_head_t *)l)->prev = 0; \
+                ((list_head_t *)l)->next = 0; \
+            } while (0)
 
 int kstrcmp(const char *p, const char *q);
 

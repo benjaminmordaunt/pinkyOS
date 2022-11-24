@@ -18,7 +18,7 @@
  */
 
 #include "kmem.h"
-#include <types.h>
+#include "types.h"
 #include <inttypes.h>
 #include "page.h"
 
@@ -48,7 +48,7 @@ struct pm_extent {
    present in the buddy system. */
 
 struct vm_page_struct {
-    list_head_t fle;     /* freelist entry */
+    list_head_t fle;     /* freelist entry - must be first in struct */
     uint8_t     order;   /* order of this block */
     uint8_t     flags;   /* page flags as applied by the vm system - see vm_page.h */
 } __packed;
@@ -257,7 +257,7 @@ struct vm_page_struct *_kmalloc(int order) {
 
         /* The _kfree operation doesn't just liberate the unused buddy,
            it actually _performs_ the split from (order + 1) to order. */
-        _kfree(block + VM_ORDER_BLOCK_OFFSET(order, 1));
+        _kfree(block + VM_ORDER_BLOCK_OFFSET(order, 1), order);
     }
 
     return block;
@@ -270,6 +270,64 @@ void *kmalloc(int order) {
 
     block = _kmalloc(order);
     return VM_HEAP_FROM_PGDAT(block);
+}
+
+ void _kfree(struct vm_page_struct *block, int order) {
+    struct vm_page_struct *target;
+    struct pm_physmap *pmap = &pm_physmap_up;
+    int child, is_lo_buddy;
+
+    if (list_entry_valid(&block->fle))
+        panic("kfree: double free or overlapping orders");
+
+    /* Buddy merge check */
+    if (order < VM_MAX_ORDER) {
+        is_lo_buddy = (VM_GET_BUDDY_TYPE(block) == 0);
+        target = is_lo_buddy ? (block + VM_ORDER_BLOCK_OFFSET(order, 1))   
+                             : (block - VM_ORDER_BLOCK_OFFSET(order, 1));
+
+        /* Travel up the orders... */
+        if (!list_entry_valid(&target->fle)) {
+            target = is_lo_buddy ? (block) : (target);
+            _kfree(target, order + 1);
+        } 
+        /* Our buddy cannot be coalesced... */
+        else {
+            list_head_init(&block->fle);
+            list_tail_init(&target->fle);
+
+            /* XXX: Handle this in singly-linked list routines. */
+            /* NOTE: Doesn't really matter here which order buddies
+                     get added to the freelist. */
+            block->fle.next  = target;
+            target->fle.prev = block;
+
+            if (!pmap->orders[order])
+                target->fle.next = LIST_TAIL_TERM;
+            else 
+                target->fle.next = &pmap->orders[order]->fle;
+
+            pmap->orders[order] = block;
+        }
+    } else {
+        list_head_init(&block->fle);
+        block->fle.next = LIST_TAIL_TERM;
+
+        pmap->orders[order] = block;
+    }
+}
+
+void kfree(void *addr, int order) {
+    struct vm_page_struct *block;
+    struct pm_physmap *pmap = &pm_physmap_up;
+    char *mos_addr = VM_ADDR_TO_MOS(addr);
+
+    if ((order < 0) || (order > VM_MAX_ORDER) || 
+        ((uintptr_t)mos_addr & ((1 << order) - 1)))
+        panic("kfree: order out of range or addr unaligned with order");
+
+    block = VM_PGDAT_FROM_HEAP(mos_addr);
+    _kfree(block, order);
 }
 
 // ----- TO BE MOVED BEGIN -----
