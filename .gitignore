@@ -4,3 +4,4 @@
 *.asm
 *.elf
 _*
+.ccls-cache
