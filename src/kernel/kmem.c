@@ -260,6 +260,8 @@ struct vm_page_struct *_kmalloc(int order) {
         _kfree(block + VM_ORDER_BLOCK_OFFSET(order, 1), order);
     }
 
+    list_remove(&block->fle);
+
     return block;
 }
 
