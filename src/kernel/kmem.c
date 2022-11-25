@@ -304,9 +304,7 @@ void *kmalloc(int order) {
             block->fle.next  = target;
             target->fle.prev = block;
 
-            if (!pmap->orders[order])
-                target->fle.next = LIST_TAIL_TERM;
-            else 
+            if (pmap->orders[order]) 
                 target->fle.next = &pmap->orders[order]->fle;
 
             pmap->orders[order] = block;
