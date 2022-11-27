@@ -137,8 +137,9 @@ void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
        are contained completely within [start, end-1]. This will always be possible at some point,
        assuming start and end are order-0 aligned. */
     for (; order > 0; order--) {
+        block = pmap->orders[order];
+
         for (;;) {
-            block = pmap->orders[order];
             if (!list_entry_valid(&block->fle))
                 break;
 
@@ -150,9 +151,8 @@ void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
                 (VM_HEAP_FROM_PGDAT(block) + VM_HEAP_BLOCK_SIZE(order)) <= endp) {
                 list_remove(block);
                 block->flags |= VM_PAGE_KEEPOUT;
-                break;
             }
-
+            else
             /* Is this block partially overlapping [start, end-1]? */
             if ((startp >= blockstartp && startp < blockendp)
              || (endp > blockstartp && endp <= blockendp)) {
@@ -162,7 +162,12 @@ void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
                 list_remove(block);
                 _kfree(block, order - 1);
                 _kfree(block + VM_ORDER_BLOCK_OFFSET(order - 1, 1), order - 1);
-             }
+            }
+
+            if (block->fle.next == LIST_TAIL_TERM)
+                break;
+
+            block = (struct vm_page_struct *)block->fle.next;
         }
     }
 }
