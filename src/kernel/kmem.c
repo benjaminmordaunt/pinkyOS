@@ -127,7 +127,7 @@ int _pm_block_split(struct pm_physmap *pmap, int block_offset, int order) {
 /* Used to apply attributes to blocks without actually using them. */
 /* `start` and `end` are in MOS. */
 void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
-    struct vm_page_struct *block;
+    struct vm_page_struct *block, *blocknxt;
     uintptr_t startp = (uintptr_t)start, endp = (uintptr_t)end;
     uintptr_t blockstartp, blockendp;
 
@@ -149,6 +149,10 @@ void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
             /* Is this block completely within [start, end-1]? */
             if (VM_HEAP_FROM_PGDAT(block) >= startp &&
                 (VM_HEAP_FROM_PGDAT(block) + VM_HEAP_BLOCK_SIZE(order)) <= endp) {
+                
+                /* Need to save next before removing from list, so we can continue
+                   our analysis at this order. */
+                blocknxt = (struct vm_page_struct *)block->fle.next;
                 list_remove(block);
                 block->flags |= VM_PAGE_KEEPOUT;
             }
@@ -159,13 +163,13 @@ void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
                 // Remove this block, add its children to the freelist,
                 // and let the next order iteration pick them up to do the same checks.
 
+                blocknxt = (struct vm_page_struct *)block->fle.next;
                 list_remove(block);
                 _kfree(block, order - 1);
                 _kfree(block + VM_ORDER_BLOCK_OFFSET(order - 1, 1), order - 1);
             }
 
-            block = (struct vm_page_struct *)block->fle.next;
-            if (block == LIST_TAIL_TERM)
+            if ((block = blocknxt) == LIST_TAIL_TERM)
                 break;
         }
     }
