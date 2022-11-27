@@ -21,6 +21,9 @@ typedef struct list_head_struct {
     struct list_head_struct *prev;
 } list_head_t;
 
+#define IS_ALIGNED(addr) \
+
+
 #define LIST_HEAD_TERM        UINTPTR_MAX
 #define LIST_TAIL_TERM        UINTPTR_MAX
 
@@ -50,6 +53,13 @@ typedef struct list_head_struct {
                 ((list_head_t *)l)->prev = 0; \
                 ((list_head_t *)l)->next = 0; \
             } while (0)
+
+/* Alignment helpers */
+#define IS_ALIGNED_LSL(x, shift) \
+            (!((x) & ((1 << (shift)) - 1)))
+
+#define IS_ALIGNED(x, align) \
+            (!((x) & ((align) - 1)))
 
 int kstrcmp(const char *p, const char *q);
 

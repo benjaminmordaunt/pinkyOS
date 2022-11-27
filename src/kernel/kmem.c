@@ -17,6 +17,7 @@
    buddy allocator to kickstart development of pinkyOS.
  */
 
+#include "bitarith.h"
 #include "kmem.h"
 #include "types.h"
 #include <inttypes.h>
@@ -123,56 +124,99 @@ int _pm_block_split(struct pm_physmap *pmap, int block_offset, int order) {
     return 0;
 }
 
+/* Used to apply attributes to blocks without actually using them. */
+/* `start` and `end` are in MOS. */
+void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
+    struct vm_page_struct *block;
+    uintptr_t startp = (uintptr_t)start, endp = (uintptr_t)end;
+    uintptr_t blockstartp, blockendp;
+
+    int order = pmap->maxord;
+    
+    /* The complete condition here is when the all queried blocks that lie within [start, end-1]
+       are contained completely within [start, end-1]. This will always be possible at some point,
+       assuming start and end are order-0 aligned. */
+    for (; order > 0; order--) {
+        for (;;) {
+            block = pmap->orders[order];
+            if (!list_entry_valid(&block->fle))
+                break;
+
+            blockstartp = (uintptr_t)VM_HEAP_FROM_PGDAT(block);
+            blockendp = blockstartp + VM_HEAP_BLOCK_SIZE(order);
+
+            /* Is this block completely within [start, end-1]? */
+            if (VM_HEAP_FROM_PGDAT(block) >= startp &&
+                (VM_HEAP_FROM_PGDAT(block) + VM_HEAP_BLOCK_SIZE(order)) <= endp) {
+                list_remove(block);
+                block->flags |= VM_PAGE_KEEPOUT;
+                break;
+            }
+
+            /* Is this block partially overlapping [start, end-1]? */
+            if ((startp >= blockstartp && startp < blockendp)
+             || (endp > blockstartp && endp <= blockendp)) {
+                // Remove this block, add its children to the freelist,
+                // and let the next order iteration pick them up to do the same checks.
+
+                list_remove(block);
+                _kfree(block, order - 1);
+                _kfree(block + VM_ORDER_BLOCK_OFFSET(order - 1, 1), order - 1);
+             }
+        }
+    }
+}
+
 /* Ensures a certain order of block granularity exists within the map for addr.
    addr is page aligned. addr needs to be in the max-order-offset space */
-int pm_physmap_assert_split(struct pm_physmap *pmap, void *addr, int order) {
-    int block_offset, iord;
-    list_head_t *block;
-    uintptr_t tgt_block_base;
+// int pm_physmap_assert_split(struct pm_physmap *pmap, void *addr, int order) {
+//     int block_offset, iord;
+//     list_head_t *block;
+//     uintptr_t tgt_block_base;
 
-    /* If the block already exists at a finer granularity, do nothing. */    
-    /* Find the higher order block and request splits */
-    for (iord = 0; iord <= pmap->maxord; iord++) {
-        tgt_block_base = ALIGN_DOWN((uintptr_t)(addr), _PT_PS + iord);
-        block_offset = pm_block_offset(pmap, tgt_block_base, iord);
-        block = &pmap->pgdat_start[pm_order_offset(iord, pmap->maxord) + block_offset];
+//     /* If the block already exists at a finer granularity, do nothing. */    
+//     /* Find the higher order block and request splits */
+//     for (iord = 0; iord <= pmap->maxord; iord++) {
+//         tgt_block_base = ALIGN_DOWN((uintptr_t)(addr), _PT_PS + iord);
+//         block_offset = pm_block_offset(pmap, tgt_block_base, iord);
+//         block = &pmap->pgdat_start[pm_order_offset(iord, pmap->maxord) + block_offset];
 
-        if (list_entry_valid(block)) {
-            if (iord > order) {
-                _pm_block_split(pmap, block_offset, iord);
-                iord -= 2;
-                continue;
-            }
-            return 1;
-        }
-    }
+//         if (list_entry_valid(block)) {
+//             if (iord > order) {
+//                 _pm_block_split(pmap, block_offset, iord);
+//                 iord -= 2;
+//                 continue;
+//             }
+//             return 1;
+//         }
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
 
-int pm_physmap_mark_region(struct pm_physmap *pmap, void *start, void *end) {
-    int start_min_ord, end_min_ord;
-    uintptr_t start_align_goal;
-    int iord;
+// int pm_physmap_mark_region(struct pm_physmap *pmap, void *start, void *end) {
+//     int start_min_ord, end_min_ord;
+//     uintptr_t start_align_goal;
+//     int iord;
 
-    /* Ensure we have sufficient granularity of control over ALIGN_DOWN(start, _PT_PS) */
-    start_min_ord = 0;
-    start_align_goal = ALIGN_DOWN((uintptr_t)start, _PT_PS);
+//     /* Ensure we have sufficient granularity of control over ALIGN_DOWN(start, _PT_PS) */
+//     start_min_ord = 0;
+//     start_align_goal = ALIGN_DOWN((uintptr_t)start, _PT_PS);
 
-    /* Aritmetic coming up which operates on pgdat, so need to offset */
-    start_align_goal -= (pmap->poff << _PT_PS);
+//     /* Aritmetic coming up which operates on pgdat, so need to offset */
+//     start_align_goal -= (pmap->poff << _PT_PS);
 
-    for (iord = pmap->maxord; iord; iord--) {
-        /* Get the highest order that also aligns with this page to
-           minimise splitting. */
+//     for (iord = pmap->maxord; iord; iord--) {
+//         /* Get the highest order that also aligns with this page to
+//            minimise splitting. */
 
-        if (start_align_goal == ALIGN_DOWN((uintptr_t)start, _PT_PS + iord)) {
-            start_min_ord = iord;
-            break;
-        }
-    }
-    pm_physmap_assert_split(pmap, start_align_goal, start_min_ord);
-}
+//         if (start_align_goal == ALIGN_DOWN((uintptr_t)start, _PT_PS + iord)) {
+//             start_min_ord = iord;
+//             break;
+//         }
+//     }
+//     pm_physmap_assert_split(pmap, start_align_goal, start_min_ord);
+// }
 
 int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_head) {
     uintptr_t physmem_sz = physmem_ext->end - physmem_ext->start;
@@ -182,19 +226,19 @@ int pm_physmap_init(struct pm_extent *physmem_ext, struct pm_extent *keepout_hea
     list_head_t *ord;
     int ordidx, maxord, i, j, rc, pgdat_entries;
 
-    if (physmem_ext->start != ALIGN_DOWN(physmem_ext->start, _PT_PS)
-    || (physmem_ext->end   != ALIGN_DOWN(physmem_ext->end,   _PT_PS))) {
+    if (!IS_ALIGNED_LSL(physmem_ext->start, _PT_PS)
+    || (!IS_ALIGNED_LSL(physmem_ext->end, _PT_PS))) {
         panic("pm_physmap_init: addressable extent vas must be at least page aligned");
     }
 
-    if (physmem_sz & ((1 << (PM_BUDDY_MAX_ORDER + _PT_PS)) - 1) != 0)
+    if (physmem_sz <= (1 << (VM_MAX_ORDER + _PT_PS)))
         panic("pm_physmap_init: addressable range cannot be covered by buddy allocator");
 
-    maxord = ffs(physmem_sz) + 1 - _PT_PS;
+    maxord = ffs64(physmem_sz) - _PT_PS;
     ordsz = (1 << (_PT_PS + maxord));
     pgdat_entries = (1 << (maxord));
 
-    pmap->pgdat_start = (void*)physmem_ext->start;
+    pmap->pgdat_start = (struct vm_page_struct*)physmem_ext->start;
     pmap->heap_start = ALIGN_UP((uintptr_t)pmap->pgdat_start + pgdat_entries * sizeof(struct vm_page_struct), _PT_PS);
     
     /* How many order-0 pages are we off from being order-maxord aligned? 
@@ -289,23 +333,21 @@ void *kmalloc(int order) {
                              : (block - VM_ORDER_BLOCK_OFFSET(order, 1));
 
         /* Travel up the orders... */
-        if (!list_entry_valid(&target->fle)) {
+        if (list_entry_valid(&target->fle)) {
+            list_remove(&block->fle);
+            list_remove(&target->fle);
+
             target = is_lo_buddy ? (block) : (target);
             _kfree(target, order + 1);
         } 
         /* Our buddy cannot be coalesced... */
         else {
             list_head_init(&block->fle);
-            list_tail_init(&target->fle);
-
-            /* XXX: Handle this in singly-linked list routines. */
-            /* NOTE: Doesn't really matter here which order buddies
-                     get added to the freelist. */
-            block->fle.next  = target;
-            target->fle.prev = block;
 
             if (pmap->orders[order]) 
-                target->fle.next = &pmap->orders[order]->fle;
+                block->fle.next = &pmap->orders[order]->fle;
+            else
+                block->fle.next = LIST_TAIL_TERM;
 
             pmap->orders[order] = block;
         }
@@ -323,7 +365,7 @@ void kfree(void *addr, int order) {
     char *mos_addr = VM_ADDR_TO_MOS(addr);
 
     if ((order < 0) || (order > VM_MAX_ORDER) || 
-        ((uintptr_t)mos_addr & ((1 << order) - 1)))
+        (!IS_ALIGNED_LSL((uintptr_t)mos_addr, order + _PT_PS)))
         panic("kfree: order out of range or addr unaligned with order");
 
     block = VM_PGDAT_FROM_HEAP(mos_addr);

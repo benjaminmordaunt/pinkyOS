@@ -92,6 +92,9 @@ int pgtbl_map_pages(pgtbl_desc_t *base, va_t start, va_t end, pa_t phys_start, p
 #define VM_HEAP_FROM_PGDAT(block) \
             ((void *)(pmap->heap_start + (VM_ORDER_BLOCK_COUNT(0, (block)) << _PT_PS)))
 
+#define VM_HEAP_BLOCK_SIZE(order) \
+            (1 << ((order) + _PT_PS))
+            
 #define VM_PGDAT_FROM_HEAP(addr) \
             (pmap->pgdat_start + (((char *)(addr) - (char *)pmap->heap_start) >> _PT_PS))
             
