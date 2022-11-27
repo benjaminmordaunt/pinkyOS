@@ -164,10 +164,9 @@ void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
                 _kfree(block + VM_ORDER_BLOCK_OFFSET(order - 1, 1), order - 1);
             }
 
-            if (block->fle.next == LIST_TAIL_TERM)
-                break;
-
             block = (struct vm_page_struct *)block->fle.next;
+            if (block == LIST_TAIL_TERM)
+                break;
         }
     }
 }
