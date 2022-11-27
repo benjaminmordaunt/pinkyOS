@@ -147,8 +147,8 @@ void _kmalloc2(struct pm_physmap *pmap, void *start, void *end, uint8_t flags) {
             blockendp = blockstartp + VM_HEAP_BLOCK_SIZE(order);
 
             /* Is this block completely within [start, end-1]? */
-            if (VM_HEAP_FROM_PGDAT(block) >= startp &&
-                (VM_HEAP_FROM_PGDAT(block) + VM_HEAP_BLOCK_SIZE(order)) <= endp) {
+            if (blockstartp >= startp
+             && blockendp <= endp) {
                 
                 /* Need to save next before removing from list, so we can continue
                    our analysis at this order. */
